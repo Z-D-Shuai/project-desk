@@ -1,24 +1,24 @@
-# PROJECT DESK · Cream Studio 设计系统
+# PROJECT DESK · Cream Studio Design System
 
-当前版本 v1.0.0，Phase 8.2，2026-11-18；视觉基线仍是 v0.7.2 / Phase 7.2。适用于现有 Node / 原生模块 / SQLite 桌面工作台。
+Current version v1.0.0, Phase 8.2, 2026-11-18; the visual baseline remains v0.7.2 / Phase 7.2. Applies to the existing Node / native modules / SQLite desktop workbench.
 
-Phase 8.2 只修复主题控件状态：顶部成功保存 Light / Dark / Follow System 后，同步设置页选择值；失败恢复已保存值。单纯系统浅深外观变化不覆盖用户未保存的表单草稿。Canvas 昼夜绘制、点阵、拖动/弹簧和所有 CSS 文件未改。单元与设置页渲染回归通过；本轮真实浏览器因 Playwright EPERM 未能启动，不能以历史截图代替 v1.0.0 UI 最终验收。
+Phase 8.2 only fixes theme control state: after a successful save from the top bar to Light / Dark / Follow System, the settings page selection is synchronised; on failure the saved value is restored. A pure system light/dark appearance change never overwrites an unsaved form draft. The Canvas day/night rendering, dot matrix, dragging/spring behaviour and all CSS files are unchanged. Unit and settings-page rendering regressions pass; the real browser run for this round could not start due to Playwright EPERM, so historical screenshots cannot substitute for the final UI acceptance of v1.0.0.
 
-## 依据与取舍
+## Basis and trade-offs
 
-已读取根目录 AGENTS.md、项目专用 project-desk-ui Skill 及全部六份规范、UI Kit 的 MASTER 和页面方案、原始《光暗滑块-修复版本.html》、参考压缩包的文档与关键帧总览，并结合用户提供的暖米色工作台图片。T1/T3、S1/S3、Q1/Q2、M3、P2/P3、R3、C1/C2、D1/D3、H1/H2、V1/V2 均从已保存规范落实，不重新猜测方案编号。
+Read the root AGENTS.md, the project-specific project-desk-ui Skill and all six specification documents, the UI Kit MASTER and page plans, the original "Light-dark slider — fixed version.html", the reference archive documentation and keyframe overview, combined with the user-provided warm beige workbench image. T1/T3, S1/S3, Q1/Q2, M3, P2/P3, R3, C1/C2, D1/D3, H1/H2 and V1/V2 are all implemented from the saved specifications rather than re-guessed scheme numbers.
 
-风格为 Cream Studio + Refined Editorial + Soft Neumorphism。用户明确选择的奶油色、柔和阴影与原版滑块光晕优先于通用设计技能中的禁止偏好。只在滑块、选中控件、浮层和轻微交互中使用这些效果，不把所有内容面板做成膨胀拟态。
+The style is Cream Studio + Refined Editorial + Soft Neumorphism. The cream palette, soft shadows and original slider glow explicitly chosen by the user take precedence over prohibitions in generic design skills. These effects are used only for the slider, selected controls, overlays and subtle interactions — never turning every content panel into inflated neumorphism.
 
-## Tokens 与兼容层
+## Tokens and compatibility layer
 
-主定义 public/styles/tokens.css，来自 UI Kit 的语义色板；旧 --ground / --surface / --ink 等映射到 --pd-*，保证旧功能复用同一主题。Phase 7 基础组件由 studio.css 保留兼容，Phase 7.2 材质、外壳和项目卡片由 alignment.css 统一校准；最终 tokens 以 alignment.css 为准。页面与组件布局由两者共同收口，其余原页面样式继续保留为兼容基础。
+Primary definitions live in `public/styles/tokens.css`, derived from the UI Kit semantic palette; legacy `--ground` / `--surface` / `--ink` map onto `--pd-*` so legacy features reuse the same theme. Phase 7 base components are kept compatible by `studio.css`, while Phase 7.2 materials, shell and project cards are calibrated centrally in `alignment.css`; the final tokens are those in `alignment.css`. Page and component layout is consolidated by both files, with the remaining original page styles retained as a compatibility base.
 
-| 角色 | Light | Dark |
+| Role | Light | Dark |
 | --- | --- | --- |
 | Canvas | #F7F2EB | #24221F |
 | Surface | #FCF7F0 | #2D2A26 |
-| Raised / Muted surface（--raised） | #EEE5D9 | #34302A |
+| Raised / Muted surface (--raised) | #EEE5D9 | #34302A |
 | Inset | #E7D8C4 | #1D1B18 |
 | Primary text | #26251F | #EFE7DA |
 | Secondary text | #6F6A61 | #C4B8A6 |
@@ -27,58 +27,58 @@ Phase 8.2 只修复主题控件状态：顶部成功保存 Light / Dark / Follow
 | Accent | #A49379 | #B8A58A |
 | Success | #8E9F6C | #A8B782 |
 
-字体采用 Windows 系统 UI 字体；Georgia 仅用于品牌和总数，中文标题使用清晰的系统黑体。主标题 34px，窄屏 28px；项目卡片标题 22px，窄屏 21px；操作与正文 14–16px；桌面更新时间 14px，导航 20px；次级元数据至少 11px。数字使用 tabular-nums。颜色不能替代状态文字。
+Typography uses the Windows system UI font; Georgia is reserved for the brand and totals, while Chinese headings use a clear system sans. Primary heading 34px (28px on narrow screens); project card title 22px (21px narrow); actions and body 14–16px; desktop update time 14px, navigation 20px; secondary metadata at least 11px. Numbers use `tabular-nums`. Colour never replaces status text.
 
-间距使用 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40；常规控件 10px 圆角，面板 14–16px，浮层 18px。纸面以细描边和柔和环境阴影区分，项目/资料卡片使用双层软阴影；选中状态和输入框有适度 Inset。深色主题独立使用暖黑阴影与低强度暖光，不反转整套颜色。
+Spacing uses 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40; standard controls 10px radius, panels 14–16px, overlays 18px. Paper surfaces are distinguished by fine strokes and soft ambient shadow, with project/material cards using a double-layer soft shadow; selected states and inputs use moderate inset. The dark theme uses warm-black shadows and low-intensity warm light independently rather than inverting the whole palette.
 
-动效 tokens：fast 140ms、base 180ms、panel 220ms；ease-out cubic-bezier(.23,1,.32,1)，ease-in-out cubic-bezier(.77,0,.175,1)，drawer cubic-bezier(.32,.72,0,1)。常用导航保持即时，卡片只轻微抬升 3px；键盘命令面板不延迟打开。
+Motion tokens: fast 140ms, base 180ms, panel 220ms; ease-out `cubic-bezier(.23,1,.32,1)`, ease-in-out `cubic-bezier(.77,0,.175,1)`, drawer `cubic-bezier(.32,.72,0,1)`. Common navigation stays instant, cards lift only 3px, and the keyboard command palette opens without delay.
 
-## 共享组件与状态
+## Shared components and states
 
-- Button：静态细边界、hover 表面变化、press 轻微 inset、focus-visible 外环、disabled 减弱；primary 采用暖石色底与深色文字，避免浅米色按钮上的白字对比不足。
-- Input / Select：共享边界、40px 基础高度，原生输入及下拉语义保持；表单错误沿用原组件，保存中禁用原有控件。
-- Project Card：左侧同源 Progress Ring，右侧名称、分类与状态、真实当前工作（无备忘时显示简介）及开发记录数量，下方更新时间、独立详情入口与置顶按钮。卡片主体是链接，置顶是独立按钮，不触发导航。列表视图保留原列表语义。
-- Progress Ring：唯一真实 progress 值驱动，圆端线帽，进行中绿、暂停蓝灰、完成淡紫、放弃陶灰，0% 不显示线帽残点；实际保存成功后新状态重新读取，不用动画假装保存成功。手动进度仍与项目状态独立。
-- Tabs / Badges：横向文字加计数、选中状态柔和 Inset 胶囊；视图切换有 Raised / Inset；状态点配合文字。
-- Dropdown / Dialog / Side Panel：紧凑快捷菜单可展开双列完整面板；现有原生 dialog 提供模态焦点、Esc 关闭与返回焦点，抽屉保留原布局，浮层共用材质。
-- Command Palette：Ctrl+K、↑↓选择、Enter执行、Esc关闭；实时搜索复用统一 API，带取消/过期响应保护。
-- Empty / Loading / Error：只呈现真实状态；保留正在连接、读取中、重试、空分类/项目/资料说明。成功反馈只在原保存函数成功返回后显示 SVG tick 与短暂确认，不在失败时显示。
-- Tooltip：优先明确可见文字和 aria-label；图标/方向按钮提供可访问名称，不用浮动提示替代操作名称。
+- **Button**: static fine border, surface change on hover, slight inset on press, focus-visible outer ring, reduced emphasis when disabled; primary uses a warm stone background with dark text to avoid insufficient contrast from white text on light beige.
+- **Input / Select**: shared borders, 40px base height, native input and dropdown semantics preserved; form errors reuse the original component and original controls are disabled while saving.
+- **Project Card**: a same-origin Progress Ring on the left; on the right the name, category and status, real current work (description when no memo exists) and development record count; below, the update time, an independent detail entry and a pin button. The card body is a link, the pin is a separate button that does not trigger navigation. The list view keeps the original list semantics.
+- **Progress Ring**: driven solely by the real `progress` value, round line caps, green when in progress, blue-grey when paused, light purple when complete, terracotta grey when abandoned; 0% shows no cap residue. After a successful save the new state is re-read rather than faking success with an animation. Manual progress stays independent of project status.
+- **Tabs / Badges**: horizontal text plus counts with a soft inset capsule for the selected state; view switching uses raised/inset; status dots accompany text.
+- **Dropdown / Dialog / Side Panel**: a compact quick menu expands into a full two-column panel; the existing native `dialog` provides modal focus, Esc to close and focus return, the drawer keeps the original layout, and overlays share one material.
+- **Command Palette**: `Ctrl+K`, ↑↓ to select, Enter to run, Esc to close; live search reuses the unified API with cancellation and stale-response protection.
+- **Empty / Loading / Error**: only real states are presented, retaining connecting, loading, retry and empty category/project/material explanations. Success feedback shows an SVG tick and a brief confirmation only after the original save function returns successfully — never on failure.
+- **Tooltip**: prefer explicit visible text and `aria-label`; icon and directional buttons carry accessible names rather than relying on floating hints to convey the action.
 
-## 原版昼夜滑块移植
+## Porting the original day/night slider
 
-public/ui/day-night.js 直接从用户 HTML 的绘制与交互脚本移植，没有 iframe、完整页面嵌入或普通太阳月亮图标替代。
+`public/ui/day-night.js` is ported directly from the drawing and interaction script in the user's HTML — no iframe, full-page embed or ordinary sun/moon icon substitute.
 
-保持原几何坐标、磨砂玻璃渐变/噪点、月牙/太阳同一圆角点阵及配对轨迹、OKLab 多段色板、冷暖边缘光、指针捕获、110ms 速度采样、0.06 惯性预测、临界阻尼 w=10 弹簧、方向键/Home/End/Space/Enter 行为。移动到顶部：紧凑态直接操作同一 Canvas（scale .30），展开态把同一 stage 移到浮层（最大 scale .516），摘要使用清空后重绘的画布镜像；没有第二套动画引擎。点击直接反转 Light/Dark；只有拖动才使用位置与惯性判断目标，右侧独立箭头展开选项。
+Original geometry coordinates, frosted-glass gradients and noise, the shared rounded dot matrix and paired trajectories for crescent and sun, OKLab multi-stop palette, warm/cool rim light, pointer capture, 110ms velocity sampling, 0.06 inertia prediction, critically damped spring with w=10, and arrow-key/Home/End/Space/Enter behaviour are all preserved. Moved to the top bar: the compact state manipulates the same Canvas (scale .30), and the expanded state moves the same stage into an overlay (max scale .516); the summary uses a cleared-and-redrawn canvas mirror. There is no second animation engine. A click inverts Light/Dark directly; only dragging uses position and inertia to pick a target, and the separate arrow on the right expands the options.
 
-适配点：绘制限定在组件根内；全页背景写入改为主题预览回调；模式选择通过原 settings API 保存；Follow System 使用原系统监听；首次恢复主题直接落在端点以免启动闪烁。拖动中背景连续插值；中间色为保证阅读对比，临时合并背景层级并选择黑/白文字，端点恢复完整设计色板。原组件内部绘制不受此对比度保护影响。
+Adaptations: drawing is scoped to the component root; full-page background writes become theme-preview callbacks; mode selection saves through the original settings API; Follow System uses the original system listener; on first theme restore the thumb lands directly on the endpoint to avoid startup flicker. The background interpolates continuously while dragging; for mid-tone readability, background layers are temporarily merged and black/white text is chosen, restoring the full designed palette at the endpoints. The original component's internal drawing is unaffected by this contrast protection.
 
-动画以 requestAnimationFrame 时间戳累计完整帧间隔，避免把绘制耗时排除导致弹簧缓慢；未变化的全页颜色不重复写入。关闭面板或进入后台时停止夜间闪烁计时；关闭面板不销毁组件，路由切换不重复安装事件监听。减少动态效果时取消位移过渡并立即吸附，保留终态与语义反馈。
+Animation accumulates full frame intervals from `requestAnimationFrame` timestamps so drawing time is not excluded (which would slow the spring); unchanged page colours are not rewritten. Night flicker timing stops when the panel closes or the tab is backgrounded; closing the panel does not destroy the component and route changes do not reinstall listeners. With reduced motion, positional transitions are removed and snapping is immediate, preserving the end state and semantic feedback.
 
-## 页面构成
+## Page composition
 
-- Overview：utility + editorial header；项目总数主导；重点项目与最近项目有大小层级；最近数量 1–12 项；开发记录按本地日期分组，开发/资料约 65/35 并列；资料类型快捷入口；真实到期摘要与直接处理。
-- Project Archive：首次卡片，支持列表并记忆；1536×1024 使用 256px 侧栏、78px 顶栏、26px 主区边距、20px 卡片间隔、三列约 396×236px 卡片、104px 环；分类/归档/排序直显，高级名称搜索按需展开；状态导航计数随组合筛选更新，筛选标签可单独清除；更新时间默认降序，保留创建时间排序，增加现有名称/完成度字段的前端排序。
-- Project Detail：区域索引 + 自适应双列内容，备忘与时间线保留完整宽度；全部现有操作和关联保留。
-- Revisit：四项真实概览 + 可直接处理列表 + 已处理历史；不做虚构日历。
-- Resources：类型导航、组合筛选、图片/本地视频预览、类别图标、项目关联数量与本地状态；网页视频不抓取远程缩略图。
-- Follow-up：当前工作与开发历程分区；原 AI/Agent、项目/日期筛选、日志编辑与项目跳转保留。
-- Settings：常规外观 / 使用统计 / 预设 / 存储 / 提醒通知 / 备份的统一分组导航。
+- **Overview**: utility + editorial header; total project count dominates; focus projects and recent projects have size hierarchy; recent count 1–12; development records grouped by local date with development/materials side by side at roughly 65/35; material type quick entries; real due summaries with direct handling.
+- **Project Archive**: cards first, list supported and remembered; at 1536×1024 a 256px sidebar, 78px top bar, 26px main padding, 20px card gap, three columns of roughly 396×236px cards and a 104px ring; category/archive/sort shown directly, advanced name search expanded on demand; status navigation counts update with combined filters and filters can be cleared individually; update time descending by default, creation-time sort retained, with frontend sorting added for existing name/completion fields.
+- **Project Detail**: section index + adaptive two-column content, with memo and timeline keeping full width; all existing operations and associations retained.
+- **Revisit**: four real overview figures + a directly actionable list + handling history; no fabricated calendar.
+- **Resources**: type navigation, combined filters, image/local video preview, category icons, project association counts and local status; web videos never fetch remote thumbnails.
+- **Follow-up**: current work and development history sections; existing AI/Agent, project/date filters, log editing and project jumps retained.
+- **Settings**: unified grouped navigation for appearance / usage statistics / presets / storage / reminders / backup.
 
-桌面固定侧栏，主工作区独立滚动；761px 以上保留侧栏，760px 以下改紧凑顶栏。表单、浮层、状态导航、资料类型导航按窗口宽度适配，不允许 body 无限延伸或横向溢出。
+Fixed sidebar on desktop with independent main-area scrolling; the sidebar is kept above 761px and becomes a compact top bar below 760px. Forms, overlays, status navigation and material type navigation adapt to window width; the body must never extend indefinitely or overflow horizontally.
 
-## 数据边界
+## Data boundaries
 
-没有数据库迁移、后端服务/SQL/API 改动，没有新任务系统、优先级或业务阶段模型，也没有伪造任务分子/分母。卡片显示已有真实字段；项目自定义标识复用已有分类图标/图片。未来若增加独立项目标识/阶段/任务，需要另行设计业务模型。
+No database migrations, backend service/SQL/API changes, no new task system, priority or business stage models, and no fabricated task numerators/denominators. Cards display existing real fields; custom project marks reuse existing category icons/images. Any future independent project mark/stage/task would require a separately designed business model.
 
-主题继续保存在 SQLite。卡片/列表、单项目置顶、最近显示数量属于浏览器界面偏好，保存在按实际数据库路径分区的 localStorage；不修改业务更新时间/提醒，亦不纳入现有 SQLite 备份。换浏览器或清除站点数据会重置这些界面偏好。
+The theme remains stored in SQLite. Card/list mode, per-project pinning and recent-item count are browser UI preferences stored in `localStorage` partitioned by actual database path; they never modify business update times or reminders and are not included in existing SQLite backups. Changing browsers or clearing site data resets these UI preferences.
 
-## Phase 7.2 参考对齐与验收
+## Phase 7.2 reference alignment and acceptance
 
-用户暖米色工作台为主视觉标准，旧深/浅截图用于识别紧凑布局、字号偏小、卡片比例和材质不足。纸面颗粒在 public/assets/paper.svg；生成的低对比水墨山景在 public/assets/studio-landscape.png，仅装饰用途、离线加载，深色另设混合与透明度。不得把参考图中的项目样本写入正式 SQLite。
+The user's warm beige workbench is the primary visual standard; the older dark/light screenshots are used to identify cramped layout, undersized type, card proportions and insufficient material. Paper grain is in `public/assets/paper.svg`; the generated low-contrast ink landscape is in `public/assets/studio-landscape.png`, decorative only and loaded offline, with separate blend and opacity in dark mode. Sample projects from the reference images must never be written into the production SQLite database.
 
-桌面状态导航、三列卡片槽位在项目数量少时保持；≤1100px 两列，≤1000px 依主区可用宽度一列，≤760px 紧凑导航。保留原生表单语义、focus-visible、独立置顶与详情链接。浏览统计仍独立于项目开发更新时间。
+Desktop status navigation and three-column card slots are preserved when few projects exist; two columns at ≤1100px, one column at ≤1000px depending on available main-area width, and compact navigation at ≤760px. Native form semantics, focus-visible, independent pinning and detail links are retained. Browsing statistics remain independent of project development update times.
 
-现有模型没有优先级/业务阶段/任务总数，故不显示虚构字段；筛选使用分类、归档及排序，信息行使用当前工作与开发记录。报告和画廊如实标识隔离验收内容。
+The existing model has no priority/business stage/total task count, so no fabricated fields are shown; filtering uses category, archive and sort, and the information row uses current work and development records. Reports and galleries label isolated acceptance content truthfully.
 
-真实浏览器主视口 1536×1024，额外 1280/1024/768/390；最终 inspect 0 FAIL / 0 WARN。用户指定 cream / Soft UI / 环境阴影 / 光晕及遮罩渐变属于明确例外，检查参数保留 palette-cream, button-fx, heavy-shadow, gradient。源码 lint 剩余日期补零和材质阴影提示，不作为业务故障。具体截图与证据见 docs/PHASE72_REPORT.md。
+Real browser primary viewport 1536×1024 plus 1280/1024/768/390; final inspection reported 0 FAIL / 0 WARN. The user-specified cream / Soft UI / ambient shadow / glow and mask gradient are explicit exceptions, and the inspection parameters `palette-cream, button-fx, heavy-shadow, gradient` are retained. Remaining lint items concern date zero-padding and material shadow hints and are not business faults. See `docs/PHASE72_REPORT.md` for screenshots and evidence.

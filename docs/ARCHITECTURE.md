@@ -1,129 +1,126 @@
-# 阶段 0 架构决定
+# Phase 0 Architecture Decisions
 
-> 当前版本 v1.0.0，Phase 8.2 修复完成，等待最终验收。本文原阶段决定按历史保留；当前能力应结合后续增量和 README 阅读，阶段 0 的禁用搜索等描述不是当前限制。
+> Current version v1.0.0; Phase 8.2 fixes complete, awaiting final acceptance. The phase decisions below are preserved as historical record; current capabilities should be read together with later increments and the README. Statements such as "search disabled" in Phase 0 are not current limitations.
 
-## Phase 8.2 局部可靠性修复
+## Phase 8.2 Reliability Fixes
 
-继续 Node.js 24 + 原生 ES Modules / HTML / CSS + 内置 SQLite、本地 HTTP；无第三方运行依赖，无新业务表或迁移。
+Continues with Node.js 24 + native ES Modules / HTML / CSS + built-in SQLite and a local HTTP server; no third-party runtime dependencies, no new business tables or migrations.
 
-- `assets.mjs` 对零字节响应直接结束；HTTP 异常处理区分 headersSent，避免二次发送响应。
-- `restore-state.mjs` 在数据库重命名前持久化切换标记和分块计算的摘要，`openDatabase` 在创建/连接前恢复明确匹配的状态，旧版不明残留拒绝创建空库。完整恢复仍由 backups.mjs 完成文件校验、目录重映射及安全备份。
-- `storage.mjs` 继续使用原磁盘操作计划/事务，补上回收目录改址时的原项目路径关系；去重前实际读取候选文件，失效候选不复用，不覆盖原位置的其他文件。
-- `data-lock.mjs` 使用独立 SQLite 排他事务做跨进程锁，避免空 JSON 文件令恢复永久阻塞；旧 PID 锁兼容，诊断元数据保留。运行互斥与业务数据库切换相互独立。
-- `launch.mjs` 核对健康版本、bootstrap 数据库路径后才复用服务，不关闭其他工作区。`version.mjs` 从 package.json 读取当前版本，健康与引导响应共享来源。
-- `studio.js` 在主题保存完成/失败时同步表单，系统外观改变保留草稿；不改原 Canvas 或 CSS。
+- `assets.mjs` ends zero-byte responses immediately; the HTTP error handler distinguishes `headersSent` to avoid sending a response twice.
+- `restore-state.mjs` persists the switch marker and a chunked digest before the database is renamed, and `openDatabase` restores an explicitly matching state before creating or connecting. Unrecognised leftovers from older versions refuse to create an empty database. Full restore still delegates file verification, directory remapping and the safety backup to `backups.mjs`.
+- `storage.mjs` keeps the original disk job/transaction plan and adds the original project path relationship when a trash directory is relocated; candidate files are actually read before deduplication, stale candidates are not reused, and other files at the original location are never overwritten.
+- `data-lock.mjs` uses an independent SQLite exclusive transaction as a cross-process lock, avoiding permanent blocking on an empty JSON lock file; the legacy PID lock remains compatible and diagnostic metadata is retained. Runtime mutual exclusion is independent of business database switching.
+- `launch.mjs` verifies the health version and bootstrap database path before reusing a running service, and never shuts down other workspaces. `version.mjs` reads the current version from package.json so health and bootstrap responses share one source.
+- `studio.js` syncs the form when theme saving succeeds or fails, and preserves drafts when the system appearance changes; the original Canvas and CSS are untouched.
 
-验证、权限限制和保留证据见 `PHASE82_REPORT.md`。本阶段不是新的全面审计，也未更改 Windows 任务或通知协议。
+Verification, permission constraints and retained evidence are in `PHASE82_REPORT.md`. This phase is not a new full audit and does not change Windows tasks or the notification protocol.
 
-日期：2026-11-16。范围：架构与基础框架。
+Date: 2026-11-16. Scope: architecture and foundation.
 
-## 选择
+## Choice
 
-使用已有 Node.js 24.x 的 HTTP、文件系统、SQLite 能力，配合原生 ES Modules、HTML/CSS。当前零第三方运行依赖、无需构建。原生模块足以支撑阶段 0；不提前引入桌面壳、云服务、AI API 或复杂状态框架。
+Use the HTTP, file system and SQLite capabilities already present in Node.js 24.x, with native ES Modules, HTML and CSS. There are zero third-party runtime dependencies and no build step. Native modules are sufficient for Phase 0; no desktop shell, cloud service, AI API or complex state framework is introduced ahead of need.
 
-界面 / HTTP 服务 / 数据层分开：pages 负责页面、ui 负责表现、services 负责请求，server 负责数据与未来文件操作。后续页面复杂度达到需要时可以局部采用成熟组件框架，而不改变持久化结构或服务接口。
+Interface, HTTP service and data layer are separated: `pages` handles pages, `ui` handles presentation, `services` handles requests, and `server` handles data and future file operations. When page complexity later justifies it, a mature component framework can be adopted locally without changing the persistence structure or the service interface.
 
-Node 内置 SQLite 接口仍处于活跃开发阶段，因此明确使用 24.x，并将调用封装在 database.mjs。未来更换驱动无需改变页面。SQLite 是磁盘数据库，不依赖 localStorage。
+Node's built-in SQLite interface is still under active development, so 24.x is pinned explicitly and all calls are wrapped in `database.mjs`. A future driver change will not affect pages. SQLite is an on-disk database; `localStorage` is not used for business data.
 
-总纲要求侧栏和顶部工具区，因此保留顶栏；搜索明确禁用并标注后续开放。基础视觉采用 Achromatic ledger（seed 1215761365）的中性色比例，保留 Windows 系统字体与中性灰，避免在最终视觉方案确定前锁定强风格。产品识别来自文件夹标记及“记录项目、保存资料、追踪历程、定期回访”的工作台分区。无外部字体、图片、远程 CDN 或示例数据。
+The product outline requires a sidebar and a top toolbar, so the top bar is retained; search was explicitly disabled and marked for later. The base visual used the neutral ratios of "Achromatic ledger" (seed 1215761365), keeping Windows system fonts and neutral greys to avoid locking in a strong style before the final visual direction was settled. Product identity comes from the folder mark and the workbench sections "record projects, keep materials, track history, review periodically". No external fonts, images, remote CDNs or sample data.
 
-## 开源参考评估
+## Open-source reference evaluation
 
-仅参考功能结构，没有复制或引入任何仓库代码。
+Only functional structure was referenced; no repository code was copied or introduced.
 
-- [Personal OS](https://github.com/im4aLL/personal-os)：个人生产力工具方向可参考；当前仓库信息不足以直接作为稳定底座，不采用整套工程。
-- [LifeOS](https://github.com/adrianvalentim/LifeOS)：本地项目、活动和阅读的组织思路相关；产品范围与本项目不同，不作为依赖。
-- [TagSpaces](https://github.com/tagspaces/tagspaces)：离线文件、标签与预览的边界有参考价值；AGPL/商业双许可和完整文件管理工程不适合作为阶段 0 必须依赖。
-- [Karakeep](https://github.com/karakeep-app/karakeep)：收藏链接、笔记、图片和检索的分类可参考；自托管及 AI 自动标签方向超过当前需求，不接入其服务。
+- [Personal OS](https://github.com/im4aLL/personal-os): useful direction for personal productivity tooling; repository information was insufficient to serve as a stable foundation, so the full engineering stack was not adopted.
+- [LifeOS](https://github.com/adrianvalentim/LifeOS): relevant ideas for organising local projects, activity and reading; product scope differs from this project and it is not a dependency.
+- [TagSpaces](https://github.com/tagspaces/tagspaces): valuable reference for offline files, tags and preview boundaries; its AGPL/commercial dual licensing and full file-management engineering were unsuitable as a Phase 0 hard dependency.
+- [Karakeep](https://github.com/karakeep-app/karakeep): useful categorisation of saved links, notes, images and retrieval; self-hosting and AI auto-tagging exceed current needs, so its services are not integrated.
 
-参考 [Node 24 SQLite 文档](https://nodejs.org/docs/latest-v24.x/api/sqlite.html)。以后如借用开源代码，必须重新确认当时具体文件的许可证。
+Referenced the [Node 24 SQLite documentation](https://nodejs.org/docs/latest-v24.x/api/sqlite.html). Any future reuse of open-source code must re-verify the licence of the specific files at that time.
 
-## 模块扩展
+## Module expansion
 
-每阶段新增对应服务、仓储方法和 SQL 迁移，再接入页面。跨页面数据共用同一服务，不复制日志或收藏。当前不引入插件运行时。
+Each phase adds the corresponding service, repository methods and SQL migration, then wires up pages. Cross-page data shares one service; logs and favourites are never duplicated. No plugin runtime is introduced.
 
-- 阶段 1：项目字段扩展、分类、CRUD、状态/进度、详情及统计。
-- 阶段 2：参与者、日志、里程碑和跟进草稿。
-- 阶段 3：资料、分类、标签和收藏夹。
-- 阶段 4：存储根目录、文件资产、回收站、备份恢复。
-- 阶段 5：提醒规则与 Windows 通知，届时确认是否需要托盘或任务计划程序。
-- 后续再做全局搜索、桌面封装和正式 UI 设计。
+- Phase 1: project field expansion, categories, CRUD, status/progress, detail view and statistics.
+- Phase 2: participants, logs, milestones and follow-up drafts.
+- Phase 3: materials, categories, tags and collections.
+- Phase 4: storage roots, file assets, recycle bin, backup and restore.
+- Phase 5: reminder rules and Windows notifications, confirming whether a tray icon or Task Scheduler is needed.
+- Later: global search, desktop packaging and formal UI design.
 
-## 运行与安全边界
+## Runtime and security boundaries
 
-仅绑定 127.0.0.1，拒绝异常 Host；写设置要求同源 JSON，校验枚举。静态根仅 public，包含路径边界检查、CSP 和禁止 MIME 嗅探。服务日志追加保存，不打印请求正文。当前没有业务写接口和删除文件能力。
+Binds to 127.0.0.1 only and rejects unexpected Host headers; settings writes require same-origin JSON and enum validation. The static root is `public` only, with path boundary checks, CSP and MIME sniffing disabled. Service logs are append-only and never print request bodies. There are no business write endpoints or file-deletion capabilities at this stage.
 
-SQLite 启用外键、WAL、5 秒忙等待，迁移在事务内执行并记版本。迁移不覆盖已有表或用户数据。后续重要迁移前应先实现备份。
+SQLite enables foreign keys, WAL and a 5-second busy timeout; migrations run inside a transaction and record their version. Migrations never overwrite existing tables or user data. Backup must be implemented before any significant migration.
 
-当前面向单用户本机使用，不提供跨设备访问或 Windows 后台服务。窗口关闭后的通知不属于本阶段承诺。
+Currently scoped to single-user, single-machine use; no cross-device access or Windows background service. Notifications while the window is closed are not promised by this phase.
 
-## 阶段 1 增量（2026-11-16）
+## Phase 1 increment (2026-11-16)
 
-继续保留原架构、页面外壳和主题，不新增第三方依赖。`server/projects.mjs` 封装业务校验及数据操作，`public/pages/projects.js` 管理列表/详情/分类页，`project-dialogs.js` 管理表单和确认，`ui/project-components.js` 统一进度、图标与时间显示，`styles/projects.css` 为增量样式。
+The original architecture, page shell and theme are retained; no new third-party dependencies. `server/projects.mjs` encapsulates business validation and data operations, `public/pages/projects.js` manages the list/detail/category pages, `project-dialogs.js` manages forms and confirmations, `ui/project-components.js` unifies progress, icon and time display, and `styles/projects.css` holds incremental styles.
 
-使用 `#projects`、`#projects/:id`、`#projects/categories` 路由。筛选条件保存在 hash 的查询部分。写入成功后从 SQLite 重新读取 bootstrap，保证总览、列表和详情使用同一份项目数据；窗口重新获得焦点时刷新，编辑使用 revision 防止旧数据覆盖。界面可输入的文字全部转义，图标标识不作为 HTML 执行。
+Routes are `#projects`, `#projects/:id` and `#projects/categories`. Filter state is kept in the hash query string. After a successful write, bootstrap data is re-read from SQLite so the overview, list and detail views share one project dataset; the view refreshes when the window regains focus, and edits use a revision check to prevent stale forms from overwriting newer data. All user-entered text is escaped, and icon identifiers are never executed as HTML.
 
-删除项目采用软删除，保留关联，未接入文件删除或回收站功能。分类转移与删除使用事务。阶段 2 的参与者、日志和时间线仅有说明性扩展区，没有编辑器、日志写入、模拟记录或提前建表。
+Project deletion is a soft delete that preserves associations; file deletion and the recycle bin are not connected. Category transfer and deletion run inside a transaction. Phase 2 sections for participants, logs and timelines contain explanatory placeholders only — no editor, no log writes, no mock records and no tables created ahead of time.
 
-开始变更前的源码/数据库快照保留于 `backups/before-phase1-20261116-201705.zip`。测试数据库与正式 data 目录隔离；正式库只执行增量迁移，不填入验收记录。
+Source/database snapshots taken before changes are kept in `backups/before-phase1-20261116-201705.zip`. The test database is isolated from the production `data` directory; the production database only runs incremental migrations and is never seeded with acceptance records.
 
+## Phase 2 increment
 
-## 阶段 2 增量
+v0.2.0, data version 003. `server/development.mjs` encapsulates participant, log, association and memo transactions; `public/pages/development.js` provides shared components and interactions, `journal.js` renders the follow-up centre page, and project detail reuses the same module. `public/styles/development.css` extends existing theme variables with no new runtime dependencies. Participant management lives at `#journal/participants`.
 
-v0.2.0，数据版本 003。server/development.mjs 封装参与者、日志、关联和备忘事务；public/pages/development.js 提供共享组件与交互，journal.js 转出跟进中心页面，项目详情复用同一模块。public/styles/development.css 延续现有主题变量，没有新增运行依赖。参与者管理位于 #journal/participants。
+Project participants and log participants are independent many-to-many associations; logs and work memos are persisted independently without duplicated copies. Deletion preserves history, and edits are revision-checked. Reads still use the local bootstrap collection, which suits personal scale; pagination can be added when data volumes grow. The local-browser architecture and one-click Windows launch are retained; Phase 3 was not started.
 
-项目参与者与日志参与者独立多对多关联；日志与工作备忘独立持久化，不维护重复副本。删除保留历史，编辑有 revision 校验。当前读取方式仍为本地 bootstrap 集合，适用于个人规模；未来大数据量再做分页。保留本地浏览器架构和 Windows 一键启动；没有进入阶段 3。
+## Phase 3 increment
 
-## 阶段 3 增量
+v0.3.0, data version 004; existing runtime architecture, theme, layout and data are retained and no dependencies are installed. `server/library.mjs` handles materials plus categories/tags/collections, shared project references and transactions; `server/assets.mjs` separately handles streaming upload, content detection, local reads, range requests and downloads.
 
-v0.3.0，数据版本 004；保留现有运行架构、主题、布局、数据，不安装依赖。server/library.mjs 负责资料及分类/标签/收藏夹、共享项目引用和事务；server/assets.mjs 单独处理流式上传、内容识别、本地读取、范围请求及下载。
+`public/pages/library.js` provides the list, detail, organisation management and project-detail association area; `library-dialogs.js` builds forms per material type; `ui/library-components.js` unifies the type/status vocabulary, pickers and cards; `styles/library.css` uses existing theme variables. Routes are `#library`, `#library/:id` and `#library/manage`. The overview shows real material counts and recently modified materials.
 
-public/pages/library.js 提供列表、详情、整理管理和项目详情关联区；library-dialogs.js 按资料类型生成表单；ui/library-components.js 统一类型/状态词表、选择控件及卡片；styles/library.css 使用已有主题变量。路由 #library、#library/:id、#library/manage。总览显示真实资料数量和最近修改资料。
+Uploads happen after metadata is saved, using a separate binary request so large files are never converted to JSON or written into SQLite. Files are capped at 512 MiB, streamed to a temporary file with SHA-256 computed on the fly, and associated transactionally once the content copy completes. Identical content shares one on-disk file while metadata stays independent. Upload failures keep the saved material and prompt for re-upload instead of pretending full success. Aborted uploads may leave temporary or unlinked content; cleanup is deferred to Phase 4.
 
-上传在元数据保存后进行，使用独立二进制请求，不把大型文件转成 JSON 或写入 SQLite。文件最多 512 MiB，流式写临时文件并计算 SHA-256，内容复制完成后事务关联；同内容共享磁盘文件，元数据保持独立。上传错误保留已保存资料并提示补传，不伪装成全部成功。异常中断可能保留临时或未关联内容，后续清理属于阶段 4。
+Files are served only from the `assets` directory under the configured data root, with managed-path boundary validation; images and videos use limited format detection, attachments are forced to download as `octet-stream`, and user-uploaded code is never executed. Responses support HEAD, single-part Range and streaming reads, so video can be fetched in segments. No transcoding, remote fetching or external media dependencies. Duplicate identical URLs are rejected in favour of editing the existing material's associations.
 
-文件仅从配置数据根目录的 assets 读取，校验 managed 路径边界；图片/视频使用有限的格式识别，附件强制下载与 octet-stream，不执行用户上传代码。响应支持 HEAD、单段 Range 和流读取，视频可按需取片段。没有转码、远程抓取或外部媒体依赖。相同网址拒绝重复新增，优先编辑现有资料的关联。
+Association changes between materials and projects bump the affected record versions so forms on either side cannot overwrite each other. Underlying associations of soft-deleted content are retained; ordinary lists exclude deleted records. File content is never deleted by business soft delete, replacement or unlinking. The external storage directory UI, reference mode, folders, batch import, recycle bin and full deletion rules are not developed at this stage.
 
-资源与项目关联更改会更新受影响记录版本，避免两侧表单互相覆盖。软删除内容的底层关联继续保留；常规列表排除已删除记录。文件内容不随业务软删除、替换或解除项目引用而删除。外部存储目录 UI、引用模式、文件夹、批量导入、回收站和完整删除规则均未开发。
+## Phase 4 increment (v0.4.0)
 
-## 阶段 4 增量（v0.4.0）
+The original architecture is retained; new modules are `file-paths.mjs` (path boundaries, digests, object location), `storage.mjs` (storage directories, import, file operations, recycle bin, project folders) and `backups.mjs` (online SQLite snapshot, verification, restore). Migration 005 is new; `file_objects` is the shared file body, while the legacy `file_assets` still stores material-specific historical assets and points to the body via `file_id`.
 
-保留原架构，新增 file-paths.mjs（路径边界、摘要和对象定位）、storage.mjs（存储目录、导入、文件操作、回收站、项目目录）、backups.mjs（SQLite 在线快照、校验、恢复）。005 为新增迁移；file_objects 是共享文件本体，旧 file_assets 仍保存资料历史资产，通过 file_id 指向本体。
+The frontend `files.js` / `files.css` provide `#library/files`, `#library/trash`, `#settings/storage` and `#settings/backup` while the four main navigation entries stay unchanged. Project and material detail views reuse the file modules. The in-app local picker lists directories and files through a same-origin POST without exposing arbitrary file contents to the page; the legacy system `FolderBrowserDialog` misbehaves on this machine, so it is not a runtime dependency. Windows Explorer is opened through an explicit visible-window entry point rather than shell command concatenation.
 
-前端 files.js / files.css 提供 #library/files、#library/trash、#settings/storage、#settings/backup，四个主导航不变。项目与资料详情复用文件模块。应用内本地选择器通过同源 POST 列出目录和文件，不向网页暴露任意文件内容；系统旧式 FolderBrowserDialog 在本机异常，因此不将它作为运行依赖。Windows Explorer 使用明确的可见窗口入口，不使用 shell 拼接命令。
+API operations are serialised so backup/restore and import do not interleave. Before a move, a `disk_jobs` plan is written; same-volume moves use rename, cross-volume moves copy, verify the digest, update the registration and then remove the source copy. On start, already-moved or already-copied plans are reconciled; when two copies exist and the state is uncertain the app only warns and never auto-deletes. Path operations are restricted to configured directories and reject traversal, symlinks and destination overwrites; external references never modify source files by default.
 
-API 操作串行，备份恢复与导入不互相交错。移动前写 disk_jobs 计划，同卷重命名；跨卷复制后核对摘要再更新登记，之后移除源副本。启动恢复已移动或已复制的计划；存在不确定双副本时只提示，不自动删除。路径操作限制在配置目录内，拒绝穿越、符号链接、目标覆盖；外部引用默认不改动源文件。
+Backups are self-contained directory packages using `node:sqlite backup` for a consistent snapshot, with per-file digest verification plus database and foreign-key integrity checks. Managed project directories are additionally scanned for unregistered files and included in the snapshot; ordinary external directories are not auto-scanned. Restore verifies first, stages all files in a separate directory, creates a pre-restore safety backup, then closes, replaces and reopens the database, falling back to the original on error. `runtime.db` is updatable so the service and later requests use the new connection; unfinished disk jobs from the backup are not replayed in the new environment.
 
-备份为自包含目录包，使用 node:sqlite backup 获取一致快照；逐文件摘要校验，数据库与外键完整性检查。托管项目目录额外扫描未登记文件纳入快照；普通外部目录不自动扫描。恢复先验证并在独立目录准备全部文件，再创建恢复前安全备份，关闭/替换/重开数据库，异常则退回原数据库。runtime.db 可更新，服务及后续请求使用新连接；备份中的未完成磁盘操作不在新环境自动执行。
+Fixed a navigation bug where stale state was rendered and then cleared user input on refresh: routes render once after a successful read, and edit forms/modals are not refreshed on window focus. No desktop shell or Phase 5 background reminders were introduced.
 
-修复导航时旧状态渲染后再次刷新清空用户输入的问题：路由读取成功后渲染一次，编辑表单/模态框中不因窗口聚焦而刷新。没有引入桌面壳或阶段 5 的后台提醒。
+## Phase 5 increment
 
-## 阶段 5 增量
+v0.5.0 / 006. `server/reminders.mjs` is the single source of truth for due calculation, handling, notification reservation and deduplication; HTTP pages and `scripts/check-reminders.mjs` share it. A project's `last_followed_at` is independent of the ordinary `updated_at`. The frontend `pages/reminders.js` / `styles/reminders.css` reuse existing components, `#journal/reviews` and `#settings/reminders` keep the four-entry navigation, and the overview only shows real pending-review summaries.
 
-v0.5.0 / 006。server/reminders.mjs 是唯一的到期、处理、通知预留与去重逻辑；HTTP 页面和 scripts/check-reminders.mjs 共用。项目的 last_followed_at 独立于普通 updated_at。前端 pages/reminders.js / styles/reminders.css 使用已有组件，#journal/reviews 与 #settings/reminders 保持四主导航结构，总览只显示真实待回访摘要。
+`server/windows-reminders.mjs` wraps invocations of a fixed PowerShell script with arguments passed through a separate configuration file rather than shell command concatenation. `windows-reminders.ps1` registers daily and logon tasks for the current user at Limited / Interactive level, plus an AUMID shortcut/protocol; WScript launches the one-shot Node checker hidden. No resident service is installed and no password is stored. The Startup folder path can be empty in this environment, so the current APPDATA is used as a fallback — verified in practice.
 
-server/windows-reminders.mjs 封装固定 PowerShell 脚本调用，参数以独立配置文件传入，不拼接 shell 命令。windows-reminders.ps1 注册当前用户 Limited / Interactive 的每日和登录任务及 AUMID 快捷方式/协议，WScript 隐藏启动单次 Node 检查器；不安装常驻服务，不保存密码。启动目录已知路径在当前环境可能为空，使用当前 APPDATA 作为回退，已实测。
+Notifications use reserved batches plus per-object cycle/cooldown accounting; when Windows rejects delivery the failure is recorded and the reservation released. Pending records from a process crash after delivery are not retried immediately, prioritising the avoidance of duplicate popups. SQLite `BEGIN IMMEDIATE` handles cross-process contention, and a data-lock file lease coordinates the checker with full-database backup/restore. The checker refuses to create an empty database when it is missing.
 
-通知以预留批次 + 逐对象 cycle/冷却记账，Windows 拒绝时记录失败并释放预留；进程在投递后崩溃的 pending 不立即重试，优先避免重复弹窗。SQLite BEGIN IMMEDIATE 负责跨进程竞争，data-lock 文件租约协调检查器和整库备份/恢复。检查器缺少数据库时拒绝建空库。
+Protocol names are distinguished by a digest of the data path; the open script validates the route allowlist, port and database identity, cold-starts the local service if needed, then opens the corresponding page. `stop.bat` / `scripts/stop.mjs` use a same-origin protected shutdown endpoint and verify the data path, distinguishing the background local service from the independent reminder task.
 
-协议名称按数据路径摘要区分；打开脚本验证路由白名单、端口和数据库身份，必要时冷启动本机服务，再打开对应页面。stop.bat / scripts/stop.mjs 使用同源受保护停止接口并校验数据路径，区分后台本地服务与独立提醒任务。
+The backup version changed from a fixed 005 to the current migration number; 005/006 packages are accepted and upgraded through shared migration functions. System tasks are closed before restore, and the candidate database defaults to `desktop_enabled=0` so the user reinstalls afterwards, avoiding a mismatch between task schedule and restored configuration.
 
-备份版本从固定 005 改为当前迁移号；允许 005/006 校验恢复，通过共享迁移函数升级旧包。恢复之前关闭系统任务，候选库默认关闭 desktop_enabled，恢复后由用户重新安装，避免任务时刻和已恢复配置不匹配。
+## Phase 6 increment (v0.6.0 / 007)
 
+Still Node.js 24 + native SQLite/HTTP + HTML/CSS/ES Modules with zero new runtime dependencies, keeping the four-entry navigation, layout and theme. New services: `usage.mjs`, `presets.mjs`, `search.mjs`; new pages: `usage.js`, `presets.js`, `search.js`, `quick-actions.js`, plus `experience.css`. Settings sub-routes are `#settings/usage` and `#settings/presets`; `#search?q=` provides unified search; `#journal/person-:id` shows a participant profile.
 
-## 阶段 6 增量（v0.6.0 / 007）
+The frontend `services/usage.js` `ActivityClock` measures real time with `performance.now`, combining `visibilityState`, `hasFocus` and user input/pointer activity. It pauses after 10 minutes of inactivity, heartbeats every 15 seconds, caps a single slice at 30 seconds, accepts only the last two minutes of late data, and treats sleep/freeze conservatively. The server merges `app` and `project:ID` intervals separately and deduplicates receipt IDs for idempotency, preventing multi-window double counting. Statistics only write `usage_*` and never touch project revision, `updated_at`, `last_followed_at` or development logs. A visit ID is created when entering a project and reused across re-renders; leaving and re-entering creates a new visit.
 
-继续使用 Node.js 24 + 原生 SQLite/HTTP + HTML/CSS/ES Modules，零新增运行依赖，保持四主导航、布局和主题。新增服务 usage.mjs、presets.mjs、search.mjs；新增页面 usage.js、presets.js、search.js、quick-actions.js 以及 experience.css。设置子路由 #settings/usage、#settings/presets；#search?q= 统一搜索；#journal/person-:id 显示参与者档案。
+Presets are data-entry templates managed uniformly by kind/name/icon/subtype/order/image/revision; default directories and initial values are registered in the 007 SQL data. Choosing a preset creates or fills an independent business record and stores an icon/image snapshot; business records never depend on preset IDs. Deleting a template does not cascade into history, and "restore defaults" only fills in missing names. Images live on the filesystem, are registered in `file_objects` and participate in existing move, path, recycle bin and full-backup verification; `file-paths.usage` also reports icon references to avoid silent image deletion.
 
-前端 services/usage.js 的 ActivityClock 使用 performance.now 计算实际时间，综合 visibilityState、hasFocus、用户输入/指针活动。10 分钟无活动暂停；15 秒心跳，单片段最多 30 秒，迟到最多接受最近两分钟，以保守方式处理休眠/冻结。服务端对 app / project:ID 区间分别合并并用收据幂等去重，避免多窗口叠加。统计仅写 usage_*，不触碰项目 revision、updated_at、last_followed_at 或开发日志。访问 ID 在进入项目时建立，同项目重渲染沿用；离开再进入建立新访问。
+Global search uses parameterised SQLite LIKE with literal wildcard escaping, limited to 50 items per type, which suits current personal local data volumes; no search service or external dependency was added. FTS can be introduced locally if content grows. Log search results carry `?log=ID`, expanding, highlighting and scrolling to the record in the detail view; category and tag results open the existing filtered lists. Recent activity is aggregated from real business `updated_at` values and never mixes in usage statistics.
 
-预设是录入模板，统一 kind/name/icon/subtype/order/image/revision 管理；默认目录和初始值在 007 SQL 数据中登记。用户选用后创建/填写独立业务记录，并保存图标/图片快照；业务不依赖预设 ID。删除模板不级联历史，恢复仅补缺名称。图片保存在文件系统，file_objects 登记并纳入现有移动、路径、回收站和完整备份校验；file-paths.usage 同时报告图标引用，避免无提示删图。
+Backups accept 005/006/007, migrating older packages before restore; new statistics tables, presets and images persist through the full snapshot. The existing Windows reminder pipeline keeps using the same rule service; this phase neither installs nor modifies system tasks.
 
-全局搜索使用参数化 SQLite LIKE、字面转义通配符，按类型限 50 项，适合目前个人本地数据规模；没有引入搜索服务或外部依赖。未来大量内容可局部换 FTS。搜索日志带 ?log=ID，在详情展开、突出并滚动定位；分类和标签进入已有过滤列表。最近活动由真实业务 updated_at 汇总，不把使用统计混入。
+## Phase 7 · Frontend design layer
 
-备份支持 005/006/007，旧包先迁移再恢复；新的统计表、预设和图片随完整快照持久化。原 Windows 提醒链路继续使用同一规则服务，本阶段不安装或更改系统任务。
-
-
-## 阶段 7 · 前端设计层
-
-v0.7.0 不改变后端、迁移或 API。tokens.css 提供 pd-* 语义体系与旧 token 适配，studio.css 收口外壳/页面/控件；ui/day-night.js 从用户 HTML 移植 Canvas/交互并限制作用域，ui/studio.js 负责主题桥接、命令与页面组织，project-card.js 共享真实项目卡片。preferences.js 按 databasePath 分区浏览器界面偏好；主题继续使用原 settings 接口。七主要页面在原 routes / bind / refresh 体系中增量调整，业务写入与统计完全沿用原逻辑。详细交互契约见 UI_DESIGN_SYSTEM.md。
+v0.7.0 changes no backend, migration or API. `tokens.css` provides the `pd-*` semantic system plus legacy token adaptation, `studio.css` consolidates shell/pages/controls; `ui/day-night.js` ports Canvas and interaction from the user's HTML with scoping limited, `ui/studio.js` owns theme bridging, commands and page organisation, and `project-card.js` shares the real project card. `preferences.js` partitions browser UI preferences by `databasePath`; the theme keeps using the existing settings endpoint. Seven main pages were adjusted incrementally within the existing routes / bind / refresh structure, and business writes and statistics follow the original logic entirely. Detailed interaction contracts are in `UI_DESIGN_SYSTEM.md`.

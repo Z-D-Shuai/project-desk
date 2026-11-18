@@ -13,13 +13,13 @@ PROJECT DESK 是一个面向 Windows 10 / 11 的本地优先项目管理与数�
 安装 Node.js 后，解压项目文件夹并双击根目录的 **`start.bat`**，浏览器会打开 `http://127.0.0.1:4317`。使用 **`stop.bat`** 停止服务。也可在项目目录打开终端并运行 `npm start`。关闭浏览器标签页不会自动停止服务。
 ## 当前版本 v1.0.0 — Released / Stable
 
-Phase 8.2 已完成 R01–R07 指定修复；本轮修复启动日志容错后，**41/41 自动测试通过**。根目录 start.bat 启动、主要页面、Light/Dark/Follow System、项目/日志/资料联动、冷启动保持及 stop.bat 正常关闭已实际验收。正式数据、业务后端与 UI 未改。完整结论见 `docs/FINAL_RELEASE.md`，启动原因与测试见 `docs/STARTUP_FIX_REPORT.md`；历史修复边界见 `docs/PHASE82_REPORT.md`。
+Phase 8.2 已完成 R01–R07 指定修复；本轮修复启动日志容错后，**41/41 自动测试通过**。根目录 start.bat 启动、主要页面、Light/Dark/Follow System、项目/日志/资料联动、冷启动保持及 stop.bat 正常关闭已实际验收。正式数据、业务后端与 UI 未改。完整结论见 `docs/zh-CN/FINAL_RELEASE.md`，启动原因与测试见 `docs/zh-CN/STARTUP_FIX_REPORT.md`；历史修复边界见 `docs/zh-CN/PHASE82_REPORT.md`。
 
 默认日志仍追加至 `logs/server.log`。若目录/文件没有写权限或写入时出错，会明确提示并继续在启动窗口输出，不再因此阻止应用运行；此时关闭窗口后，本次日志不会补写入文件。程序不自动更改权限、覆盖旧日志或另选目录。
 
 Phase 7.2 视觉对齐已完成：暖象牙纸面、水墨山景、温暖炭灰深色、三列项目卡片与大圆环。昼夜滑块位于顶部：直接点击切换，拖动后吸附；右侧小箭头展开面板，可选择跟随系统。主题仍保存到 SQLite，视图偏好保存在当前浏览器。
 
-项目档案的分类、归档范围和排序直接显示，名称搜索在“高级筛选”；顶部全局搜索及 Ctrl+K 保留。界面前后对比及历史截图见 output/playwright/phase72-gallery.html，视觉阶段报告见 docs/PHASE72_REPORT.md。本阶段未重新设计 UI。
+项目档案的分类、归档范围和排序直接显示，名称搜索在“高级筛选”；顶部全局搜索及 Ctrl+K 保留。界面前后对比及历史截图见 output/playwright/phase72-gallery.html，视觉阶段报告见 docs/zh-CN/PHASE72_REPORT.md。本阶段未重新设计 UI。
 
 ## 当前能力与范围
 
@@ -102,7 +102,7 @@ v1.0.0 恢复切换前写入 `.restore-state.json`。中断后再次启动会校
 
 检查与恢复使用独立 `.reminder-data-mutex.sqlite` 互斥文件，不增加业务表或迁移；它是运行协调文件，不纳入应用备份。进程退出由系统释放互斥。兼容 PID 锁 `.reminder-data.lock`，存活持有者仍会等待；旧空锁短暂等待后可恢复，被接管的元数据保存为 `.abandoned-*`，便于排查。
 
-更多见 `docs/ARCHITECTURE.md`、`docs/DATA.md`、`docs/PROGRESS.md`。
+更多见 `docs/zh-CN/ARCHITECTURE.md`、`docs/zh-CN/DATA.md`、`docs/zh-CN/PROGRESS.md`。
 
 
 以下按引入阶段保留使用说明；标题版本表示首次提供该能力，不是当前程序版本。
@@ -136,7 +136,7 @@ v1.0.0 恢复切换前写入 `.restore-state.json`。中断后再次启动会校
 
 删除资料需确认，当前仅从浏览和项目关联区隐藏，原数据库行、历史关联与磁盘文件保留；阶段 4 已提供资料回收站恢复入口。需要保留可访问资料时，优先设为“已归档”。替换文件保留旧资产，文件清理与恢复见下文阶段 4。资料信息先保存、文件随后上传；上传失败会明确提示并保留表单，可重试或稍后进入编辑补传。
 
-以上为阶段 3 操作说明。后续能力见下文，最新状态见 PROJECT_STATUS.md 和 docs/PROGRESS.md。
+以上为阶段 3 操作说明。后续能力见下文，最新状态见 PROJECT_STATUS.md 和 docs/zh-CN/PROGRESS.md。
 
 ## 阶段 4 使用方式（v0.4.0）
 
@@ -154,7 +154,7 @@ v1.0.0 恢复切换前写入 `.restore-state.json`。中断后再次启动会校
 
 备份期间暂停其他应用写操作。未完成备份保留 INCOMPLETE 标记，不能恢复；中断文件移动会尽量恢复登记状态或保留两份内容并显示待检查。备份未压缩或加密，请自行保管。符号链接不跟随，大规模目录和第二块物理磁盘尚未做性能验收。自动定时备份未实现；提醒和智能回访见阶段 5。
 
-启动仍为双击 start.bat，无需安装依赖。阶段 5 说明见下文。详细验证见 docs/PROGRESS.md。
+启动仍为双击 start.bat，无需安装依赖。阶段 5 说明见下文。详细验证见 docs/zh-CN/PROGRESS.md。
 
 ## 阶段 5 使用方式（v0.5.0 新增，继续保留）
 
@@ -178,7 +178,7 @@ v1.0.0 恢复切换前写入 `.restore-state.json`。中断后再次启动会校
 
 命令行辅助（在项目目录）：node scripts/manage-reminders.mjs status / install / uninstall / test / run；检查器为 node scripts/check-reminders.mjs。需要其他数据目录可加 --data 完整路径。这些命令与 UI 共用同一规则，通常使用界面即可。
 
-阶段 5 能力继续保留。测试详情见 docs/PROGRESS.md；当前状态见 PROJECT_STATUS.md。
+阶段 5 能力继续保留。测试详情见 docs/zh-CN/PROGRESS.md；当前状态见 PROJECT_STATUS.md。
 
 
 ## 阶段 6 使用方式（v0.6.0）
@@ -196,7 +196,7 @@ v1.0.0 恢复切换前写入 `.restore-state.json`。中断后再次启动会校
 
 预设图片默认保存在数据目录 `preset-images/`，复用文件管理和备份机制。可以在存储设置迁移该目录；它是预设功能所需目录，可修改位置但不可移除。删除预设不自动清除图片文件；如通过文件管理删除真实图片，会提示仍有预设或历史记录引用，并可能影响对应图标显示。
 
-运行 `npm test` 可执行当前 41 项隔离自动测试（含子测试）。阶段 6 当时为 22 项；阶段报告及具体验收边界见 `docs/PROGRESS.md`，界面已完成下文阶段 7 / 7.2 的设计。
+运行 `npm test` 可执行当前 41 项隔离自动测试（含子测试）。阶段 6 当时为 22 项；阶段报告及具体验收边界见 `docs/zh-CN/PROGRESS.md`，界面已完成下文阶段 7 / 7.2 的设计。
 
 
 ## 阶段 7 / 7.2 · Cream Studio（v0.7.0 / v0.7.2 引入）
@@ -207,7 +207,7 @@ v1.0.0 恢复切换前写入 `.restore-state.json`。中断后再次启动会校
 
 项目默认卡片，可切列表；置顶按钮将项目显示为总览重点，最近项目数量可在总览选择 1–12。主题存 SQLite；卡片/列表、置顶、最近数量仅保存在当前浏览器（按数据库路径隔离），清除站点数据或换浏览器会重置，不包含在现有备份中。
 
-历史成果/测试/限制见 docs/UI_REDESIGN_REPORT.md、docs/PHASE72_REPORT.md；设计维护规范见 docs/UI_DESIGN_SYSTEM.md；真实截图索引 output/playwright/phase7-gallery.html 和 phase72-gallery.html。截图来自当时的独立验收库，不能代替 v1.0.0 的实际浏览器最终验收。当前修复报告见 docs/PHASE82_REPORT.md。
+历史成果/测试/限制见 docs/zh-CN/UI_REDESIGN_REPORT.md、docs/zh-CN/PHASE72_REPORT.md；设计维护规范见 docs/zh-CN/UI_DESIGN_SYSTEM.md；真实截图索引 output/playwright/phase7-gallery.html 和 phase72-gallery.html。截图来自当时的独立验收库，不能代替 v1.0.0 的实际浏览器最终验收。当前修复报告见 docs/zh-CN/PHASE82_REPORT.md。
 # PROJECT DESK
 
 个人项目管理与数字资料档案馆，本地优先运行，面向 Windows 10 / 11。

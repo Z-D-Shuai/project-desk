@@ -1,223 +1,220 @@
-# 数据与文件组织
+# Data and File Organisation
 
-## v1.0.0 / Phase 8.2 当前补记
+## v1.0.0 / Phase 8.2 current notes
 
-业务 schema 仍为 **007**，34 张业务/迁移表，未改写既有 SQL 迁移。下文按引入阶段保留历史数据说明。
+The business schema remains **007**, with 34 business/migration tables; existing SQL migrations were not rewritten. The data descriptions below are preserved per introduction phase.
 
-- 数据库切换前写 `.restore-state.json`：version、previous/staged 文件名及 SHA-256；fsync 完成才移动主库。打开主库前检查标记，核验摘要、SQLite 完整性、外键和 schema_migrations；明确可恢复才接续，状态不明拒绝创建/覆盖数据库。确认后移除标记，保留安全备份。旧版无标记但存在恢复残留且主库缺失时拒绝新建空库，需保留证据后人工确认。
-- `.reminder-data-mutex.sqlite` 为独立运行互斥文件，使用 SQLite 排他事务，不是第二份业务库。关闭/退出释放系统锁；应用整库备份不打包它，也不依赖它恢复业务记录。旧 `.reminder-data.lock` 继续记录 PID/token；空锁有 2 秒初始化保护，被接管的遗留元数据改名 `.abandoned-*` 留存。存活旧持有者仍会等待，持锁业务异常不会自动重放。
-- 文件夹回收记录的 `payload` 增加可选 `project_ids`，只记录回收时的项目所有者。恢复到其他位置时，同一事务更新这些仍指向原路径的项目和文件登记；新增的旧位置使用者不被改写。旧 payload 缺此字段时按原路径前缀兼容推导，无需迁移。
-- 文件去重复用前检查磁盘当前摘要/大小；发现外部改写时更新 `file_objects` 的 sha256/size/mime/revision，再判断是否真的重复，不触碰开发日志或实际跟进时间。
-- `/api/health.version` 与 `/api/bootstrap.storage.appVersion` 来自 package.json；业务 schemaVersion 仍是 007。版本号不等同于数据库迁移号。
+- `.restore-state.json` is written before a database switch: version, previous/staged file names and their SHA-256. The primary database is only moved after fsync completes. The marker is checked before opening the primary database, verifying digest, SQLite integrity, foreign keys and `schema_migrations`; continuation only happens when recovery is clearly possible, and an unknown state refuses to create or overwrite a database. The marker is removed after confirmation and the safety backup is kept. If a legacy installation has no marker but has restore leftovers and no primary database, creating an empty database is refused — keep the evidence and confirm manually.
+- `.reminder-data-mutex.sqlite` is an independent runtime mutual-exclusion file using a SQLite exclusive transaction, not a second business database. Closing/exiting releases the OS lock; full-database application backups neither pack it nor depend on it to restore business records. The legacy `.reminder-data.lock` still records PID/token; an empty lock has a 2-second initialisation guard, and taken-over leftover metadata is renamed `.abandoned-*` for diagnosis. A surviving legacy holder is still awaited, and a crashed holder's business operations are never replayed automatically.
+- `payload` of folder recycle records gains an optional `project_ids` field recording only the project ownership at recycle time. When restoring to another location, projects and file registrations still pointing at the original path are updated in the same transaction; newly added users of the old location are not rewritten. Older payloads without the field are derived compatibly from the original path prefix, requiring no migration.
+- Before reusing a deduplicated file, the current on-disk digest/size is checked; on detecting an external rewrite, `file_objects` sha256/size/mime/revision are updated before deciding whether it is genuinely a duplicate, without touching development logs or the actual follow-up timestamps.
+- `/api/health.version` and `/api/bootstrap.storage.appVersion` come from package.json; the business `schemaVersion` remains 007. The version number is not the database migration number.
 
-本阶段正式 SQLite/WAL/SHM 指纹与修改前一致；未连接正式数据库。新副本完整性检查受目录创建权限限制未完成；隔离自动测试的完整性/外键与备份恢复通过，不能代替当前正式库的新完整性检查。详见 `PHASE82_REPORT.md`。
+The production SQLite/WAL/SHM fingerprint in this phase matches the pre-change state; the production database was not connected. The integrity check of a new copy was not completed due to directory creation permissions; isolated automated tests for integrity/foreign keys and backup/restore pass, but they do not substitute for a fresh integrity check of the current production database. See `PHASE82_REPORT.md`.
 
-数据库：`data/project-desk.sqlite`，SQLite STRICT 表。标识使用 TEXT，后续由服务生成 UUID；时间字段为 ISO 8601，后续以 UTC 保存并在界面按本地时区显示。
+Database: `data/project-desk.sqlite`, SQLite STRICT tables. Identifiers are TEXT, generated as UUIDs by the service. Timestamps are ISO 8601, stored in UTC and displayed in the local time zone.
 
-| 表 | 字段/职责（阶段增量详见下文） |
+| Table | Fields / responsibility (phase increments below) |
 | --- | --- |
-| schema_migrations | 迁移文件名、执行时间；仅工程元数据 |
-| settings | key/value；当前仅 theme，默认 system（未设置时无需写入） |
-| projects | id、名称、简介、状态、0–100 整数进度、文件夹路径、创建/更新时间、category_id、archived_at、deleted_at、revision |
-| project_categories | id、名称、图标、favorite、sort_order、revision、创建/更新时间 |
-| journal_entries | id、project_id、内容、发生/创建/更新时间 |
-| resources | 资料元数据、类型/网址/正文、分类、状态/收藏、时间、软删除、版本及当前资产引用 |
-| project_resources | 项目与资料的多对多关联 |
-| file_assets | 资料关联、存储模式、内容相对路径、原文件名、MIME、大小、摘要、创建时间 |
+| schema_migrations | Migration file name, execution time; engineering metadata only |
+| settings | key/value; currently only theme, default system (no row needed when unset) |
+| projects | id, name, description, status, 0–100 integer progress, folder path, created/updated time, category_id, archived_at, deleted_at, revision |
+| project_categories | id, name, icon, favourite, sort_order, revision, created/updated time |
+| journal_entries | id, project_id, content, occurred/created/updated time |
+| resources | Material metadata, kind/URL/body, category, status/favourite, timestamps, soft delete, revision and current asset reference |
+| project_resources | Many-to-many association between projects and materials |
+| file_assets | Material association, storage mode, content-relative path, original file name, MIME, size, digest, created time |
 
-状态与进度独立，不通过进度自动改变状态。项目状态 not_started/in_progress/paused/completed/abandoned。外键删除采用 RESTRICT，避免意外级联删除；后续业务删除应在事务中显式处理关联。
+Status and progress are independent; progress never changes status automatically. Project statuses are not_started/in_progress/paused/completed/abandoned. Foreign-key deletion uses RESTRICT to avoid accidental cascades; later business deletions must handle associations explicitly inside transactions.
 
-阶段 1 新增 `002-project-archive.sql`，原 `001-foundation.sql` 不变；已有项目默认未分类、未归档、未删除，revision=1。标签/收藏夹、参与者、提醒、资料状态、封面等继续在所属阶段通过新增迁移实现：
+Phase 1 added `002-project-archive.sql` while `001-foundation.sql` stayed unchanged; existing projects default to uncategorised, unarchived and undeleted with revision=1. Tags/collections, participants, reminders, material status and covers continue to be implemented through new migrations in their own phases:
 
-- 分类是一种主要归类，按项目/资料划分作用域；标签允许多选；收藏夹是用户整理集合，三者分别建表。
-- journal_entries 是项目详情和跟进中心的共同数据源；草稿另建表。
-- 一项资料可关联多个项目；文件资产区分复制管理和外部引用。解除记录关联不直接删除真实文件。
-- 当前托管文件在数据根目录 assets 按内容摘要组织；外部存储选择和引用模式留待阶段 4。程序源码、数据库和大文件分离。
-- 阶段 2、3 分别新增 003、004；不得改写已执行迁移。
+- A category is a single primary grouping scoped per project/material; tags allow multiple selection; a collection is a user-organised set. All three have separate tables.
+- `journal_entries` is the shared data source for project detail and the follow-up centre; drafts get their own table.
+- One material can be associated with multiple projects; file assets distinguish managed copies from external references. Unlinking a record never deletes the real file.
+- Managed files are currently organised under `assets` in the data root by content digest; external storage selection and reference mode are deferred to Phase 4. Source code, database and large files stay separate.
+- Phases 2 and 3 add 003 and 004 respectively; executed migrations must never be rewritten.
 
-## 阶段 1 数据规则
+## Phase 1 data rules
 
-- 一个项目可有一个主要分类，NULL 为“未分类”。分类名称去首尾空格后非空、最多 40 字符，SQLite NOCASE 索引避免同名（ASCII 大小写不敏感）。不限制用户分类数量。
-- 分类图标为内置键（folder/code/design/book/camera/globe/idea）或自定义符号。界面自定义符号最多 4 字符，服务端通用图标标识最多 24 字符；不接受或执行 HTML/SVG 代码。
-- favorite 只控制快捷入口，sort_order 只控制顺序；两者不改变项目分类和状态。上移/下移排序在事务内更新完整分类序列。
-- 项目名称 1–120 字符，简介最多 5000 字符，进度必须为 0–100 整数。状态、进度、分类、归档互不推导。时间由服务端生成 UTC ISO 值，界面按本机时区显示。
-- archived_at 为归档时间或 NULL；恢复只清除归档标记。编辑、归档/恢复和分类转移更新 updated_at，created_at 不变。
-- deleted_at 为软删除标记。删除只标记该行，不删除原数据和文件；常规列表、详情、分类计数与 Dashboard 排除已删除行。当前不提供软删除恢复接口/界面。
-- 分类删除以 BEGIN IMMEDIATE 事务先转移全部引用（含归档及已软删除行），再删除分类；无效目标会整体回滚。转移到 NULL 表示未分类。
-- revision 为递增版本号。项目更新/归档/删除及分类编辑要求客户端携带当前 revision，通过条件更新防止旧窗口覆盖新数据。分类转移也递增受影响项目的版本。
-- Dashboard 总数与五种状态计数均包含归档项目、排除已删除项目，另有 archived 计数。最近项目按更新时间降序、最多 5 项。
+- A project has at most one primary category; NULL means "uncategorised". Category names are trimmed, non-empty and at most 40 characters, with a SQLite NOCASE index preventing duplicates (ASCII case-insensitive). The number of categories is unlimited.
+- Category icons are built-in keys (folder/code/design/book/camera/globe/idea) or custom symbols. The UI limits custom symbols to 4 characters while the server allows up to 24 characters for generic icon identifiers; HTML/SVG code is neither accepted nor executed.
+- `favorite` only controls quick-entry visibility and `sort_order` only controls ordering; neither changes a project's category or status. Move-up/move-down reordering updates the full category sequence inside a transaction.
+- Project names are 1–120 characters, descriptions at most 5000 characters, and progress must be an integer from 0 to 100. Status, progress, category and archive state never derive from each other. Timestamps are generated server-side as UTC ISO values and displayed in the local time zone.
+- `archived_at` is the archive time or NULL; restoring only clears the archive marker. Edits, archive/restore and category transfers update `updated_at` while `created_at` stays fixed.
+- `deleted_at` is a soft-delete marker. Deletion only marks the row and deletes neither the original data nor files; ordinary lists, details, category counts and the Dashboard exclude deleted rows. No soft-delete restore endpoint or UI exists yet.
+- Category deletion transfers all references inside a `BEGIN IMMEDIATE` transaction (including archived and soft-deleted rows) before deleting the category; an invalid target rolls back entirely. Transferring to NULL means uncategorised.
+- `revision` is a monotonically increasing version. Project updates/archive/delete and category edits require the client's current revision, using conditional updates to prevent stale windows from overwriting newer data. Category transfers also bump the revision of affected projects.
+- Dashboard totals and the five status counts include archived projects and exclude deleted ones, with a separate archived count. Recent projects are ordered by update time descending, at most 5 items.
 
-## 阶段 1 HTTP 接口（历史范围）
+## Phase 1 HTTP endpoints (historical scope)
 
-除下文阶段 3 文件上传和资料元数据上限外，写入要求同源 Origin 和 application/json，限制请求体 32 KiB；无效输入 400、未找到 404、版本冲突/同名分类 409。
+Apart from Phase 3 file uploads and the material metadata limit below, writes require a same-origin Origin and `application/json`, with a 32 KiB body limit; invalid input returns 400, not found 404, and version conflicts/duplicate category names 409.
 
-| 接口 | 职责 |
+| Endpoint | Responsibility |
 | --- | --- |
-| GET /api/bootstrap | 设置、存储版本 002、项目统计、全部可见项目及分类 |
-| GET /api/projects | q/category/status/archive/sort/order 筛选排序；archive=active/archived/all，默认 active |
-| POST /api/projects | 创建项目 |
-| GET /api/projects/:id | 读取详情 |
-| PUT /api/projects/:id | 更新名称/简介/状态/进度/分类，携带 revision |
-| PUT /api/projects/:id/archive | archived 布尔值与 revision |
-| DELETE /api/projects/:id | 携带 revision，软删除 |
-| GET/POST /api/categories | 列出/新增项目分类 |
-| PUT /api/categories/:id | 修改名称/图标/收藏，携带 revision |
-| PUT /api/categories/reorder | ids 完整顺序数组 |
-| DELETE /api/categories/:id | replacement_id（分类 ID 或 null）、revision |
-| PUT /api/settings | 原有主题保存接口 |
+| GET /api/bootstrap | Settings, storage version 002, project statistics, all visible projects and categories |
+| GET /api/projects | q/category/status/archive/sort/order filtering and sorting; archive=active/archived/all, default active |
+| POST /api/projects | Create a project |
+| GET /api/projects/:id | Read detail |
+| PUT /api/projects/:id | Update name/description/status/progress/category with revision |
+| PUT /api/projects/:id/archive | archived boolean and revision |
+| DELETE /api/projects/:id | Soft delete with revision |
+| GET/POST /api/categories | List/add project categories |
+| PUT /api/categories/:id | Edit name/icon/favourite with revision |
+| PUT /api/categories/reorder | Full ordered ids array |
+| DELETE /api/categories/:id | replacement_id (category ID or null) and revision |
+| PUT /api/settings | Existing theme endpoint |
 
-当前浏览器从 bootstrap 读取项目集合，筛选和每页 30 项展示在本地完成；没有服务端分页，适用于个人规模的数据量。未来数据量明显增长时再增加服务端分页和轻量查询，不改变 SQLite 数据来源。此处为阶段 1 的读取方式；阶段 2/3 新接口见下文。
+The browser reads the project collection from bootstrap and performs filtering and 30-per-page display locally; there is no server-side pagination, which suits personal-scale data. Server-side pagination and lightweight queries can be added when volumes grow, without changing the SQLite data source. This describes Phase 1 reading only; Phase 2/3 endpoints are below.
 
+## Phase 2: 003-development.sql
 
-## 阶段 2：003-development.sql
+Keeps 001, 002 and existing project/log content, and adds:
 
-保留 001、002 及既有项目/日志内容，新增：
-
-| 数据表 | 职责 |
+| Table | Responsibility |
 | --- | --- |
-| participants | 自定义 name/type/role、revision、创建/更新时间、deleted_at |
-| project_participants | project_id + participant_id 复合主键，整个项目的参与名单 |
-| journal_participants | journal_id + participant_id 复合主键，单次日志的实际参与者 |
-| project_workspaces | 每项目一行：current_work/problems/ideas/next_step、revision、updated_at |
+| participants | Custom name/type/role, revision, created/updated time, deleted_at |
+| project_participants | Composite primary key (project_id + participant_id); the project's overall participant list |
+| journal_participants | Composite primary key (journal_id + participant_id); actual participants of a single log |
+| project_workspaces | One row per project: current_work/problems/ideas/next_step, revision, updated_at |
 
-journal_entries 增加 title/files/result/problems/next_step/notes、important、revision、deleted_at。现有 content、occurred_at 和创建/更新时间不变。标题最多 200 字符，其余文本最多 5000 字符，至少填写内容或标题；仅填标题时内容以标题保存。参与者名称 80 字符、类型 40 字符，不预置品牌或类型。请求体仍限制 32 KiB，表单超限会显示错误并保留输入。
+`journal_entries` gains title/files/result/problems/next_step/notes, important, revision and deleted_at. Existing content, occurred_at and created/updated times are unchanged. Titles are at most 200 characters, other text at most 5000, and either content or title must be present; title-only entries store the title as content. Participant names are 80 characters and types 40, with no preset brands or types. The body limit stays 32 KiB, and oversized forms show an error while preserving input.
 
-项目总体名单与日志名单分别保存。保存日志时事务写入日志和参与者链接，并将新参与者补入总体名单；移除仍被未删除日志引用的项目参与者返回 409。删除日志不清除项目曾使用过的参与者。删除参与者为软删除，历史引用保留；编辑旧日志可保留原有已删除参与者，但不能新增已删除参与者。当前名称/类型修改会反映到其历史关联，不保留每次改名的快照。
+The project's overall list and each log's list are stored separately. Saving a log writes the log and its participant links in a transaction and adds new participants to the overall list; removing a project participant still referenced by an undeleted log returns 409. Deleting a log does not clear participants the project has used. Participant deletion is soft and historical references remain; editing an old log may keep its already-deleted participants but cannot add deleted ones. Name/type edits propagate to historical associations — no per-rename snapshots are kept.
 
-所有开发写操作使用事务与 revision 冲突检查；工作备忘首次保存 revision=0，后续携带当前版本。日志/备忘/关联变更更新项目 updated_at 与 revision，不改变项目状态、进度、分类或归档。软删除项目不抹去其历史，但全局读取和统计排除该项目内容。
+All development writes use transactions with revision conflict checks; a work memo's first save uses revision=0 and later saves carry the current version. Log/memo/association changes update the project's `updated_at` and revision without changing status, progress, category or archive state. Soft-deleting a project does not erase its history, but global reads and statistics exclude that project's content.
 
-新增接口：GET/POST /api/participants、PUT/DELETE /api/participants/:id；GET/POST /api/journals、PUT/DELETE /api/journals/:id；PUT /api/projects/:id/participants；PUT /api/projects/:id/workspace。写请求仍要求同源 JSON。bootstrap 新增 participants（含历史已删除项）、memberships、journals（含 participant_ids）、workspaces；数据版本 003。各页面读取同一套数据，时间线筛选在浏览器执行，未增加日志分页。
+New endpoints: GET/POST /api/participants, PUT/DELETE /api/participants/:id; GET/POST /api/journals, PUT/DELETE /api/journals/:id; PUT /api/projects/:id/participants; PUT /api/projects/:id/workspace. Writes still require same-origin JSON. Bootstrap adds participants (including historically deleted ones), memberships, journals (with participant_ids) and workspaces; data version 003. All pages read the same dataset and timeline filtering runs in the browser without log pagination.
 
-阶段 2 完成时后续迁移从 004 开始；不要改写已执行迁移。日期存 UTC，界面与日期筛选使用本机时区。备忘不会写入 journal_entries。阶段 2 不包含附件、媒体文件或资料库写入；这些能力由下述阶段 3 增量提供。
+Phase 2 completed with the next migration starting at 004; executed migrations must not be rewritten. Dates are stored in UTC and the UI and date filters use the local time zone. Memos are never written into `journal_entries`. Phase 2 has no attachments, media files or library writes; those arrive with Phase 3 below.
 
-## 阶段 3：004-library.sql（当前）
+## Phase 3: 004-library.sql (current)
 
-不修改 001–003；SQLite 继续保存元数据，媒体文件不进入 BLOB。
+Does not modify 001–003; SQLite continues to store metadata and media files never enter BLOBs.
 
-| 表 | 新增内容 / 职责 |
+| Table | New content / responsibility |
 | --- | --- |
-| resources | category_id、platform、notes、status、favorite、last_viewed_at、deleted_at、revision、asset_id；保留 title/kind/source_url/content/created_at/updated_at |
-| resource_categories | id/name/icon/sort_order/revision/created_at/updated_at；单一主要分类 |
-| resource_tags | 同上；多选特征标签，独立名称空间 |
-| resource_collections | 同上；多选主题集合，独立名称空间 |
-| resource_tag_links | resource_id + tag_id 联合主键 |
-| resource_collection_links | resource_id + collection_id 联合主键 |
-| project_resources | 继续沿用 project_id + resource_id，多项目共享资料 |
-| file_assets | 新增 original_name、mime、size、sha256；资源关联、存储模式、相对 path、创建时间仍保留 |
+| resources | category_id, platform, notes, status, favourite, last_viewed_at, deleted_at, revision, asset_id; keeps title/kind/source_url/content/created_at/updated_at |
+| resource_categories | id/name/icon/sort_order/revision/created_at/updated_at; single primary category |
+| resource_tags | Same fields; multi-select feature labels in their own namespace |
+| resource_collections | Same fields; multi-select thematic sets in their own namespace |
+| resource_tag_links | Composite primary key (resource_id + tag_id) |
+| resource_collection_links | Composite primary key (resource_id + collection_id) |
+| project_resources | Keeps project_id + resource_id; materials shared across projects |
+| file_assets | Adds original_name, mime, size, sha256; keeps material association, storage mode, relative path and created time |
 
-kind 为 video_link/image/web/text/file/video；status 为 unsorted/to_view/learning/learned/used/archived。favorite、status、分类、标签、收藏夹和项目状态均独立。收藏时间使用 created_at，永不因编辑改变；last_viewed_at 在查看详情、打开网址或下载时更新，不递增 revision、不改变 updated_at 或学习状态。是否收藏不影响资料是否入库。
+`kind` is video_link/image/web/text/file/video; `status` is unsorted/to_view/learning/learned/used/archived. Favourite, status, category, tags, collections and project status are all independent. Favourite time uses `created_at` and never changes on edit; `last_viewed_at` updates when viewing detail, opening a URL or downloading, without bumping revision or changing `updated_at` or learning status. Favouriting does not determine whether a material is stored.
 
-标题 1–160 字符，文字内容最多 30000 字符，备注/用途最多 5000 字符，来源平台最多 100 字符（自由文本，不预置平台表）。文字资料正文必填；网址只接受 http/https，保存规范化 URL，非删除记录中完全相同 URL 拒绝重复新增并提示复用。一个资料允许最多 200 个同类关联。分类/标签/收藏夹名称 1–40 字符，分表 NOCASE 唯一；图标 1–24 字符，不当作 HTML 执行。
+Titles are 1–160 characters, text bodies at most 30000, notes/purpose at most 5000, and source platform at most 100 (free text, no preset platform table). Text materials require a body; URLs accept only http/https and are stored normalised, with exact duplicates among non-deleted records rejected in favour of reusing the existing material. A material allows at most 200 associations of each kind. Category/tag/collection names are 1–40 characters with per-table NOCASE uniqueness; icons are 1–24 characters and never executed as HTML.
 
-分类删除先在事务内转移所有引用（包括软删除资料），目标为另一个分类或 NULL；标签/收藏夹删除只解除对应链接，资料本体保留。资料软删除保留底层所有历史关联，读取时隐藏。编辑资料保留已软删除项目的原关联；编辑项目关联保留已软删除资料的原关联。关联增删更新相关版本和更新时间，旧表单返回 409。
+Category deletion first transfers all references inside a transaction (including soft-deleted materials) to another category or NULL; deleting a tag/collection only removes the links and keeps the material itself. Soft-deleting a material keeps all underlying historical associations, hiding them on read. Editing a material keeps associations to soft-deleted projects; editing project associations keeps associations to soft-deleted materials. Association changes update the relevant versions and timestamps, and stale forms receive 409.
 
-文件默认位于 data/assets/<SHA-256>（或 PROJECT_DESK_DATA_DIR/assets），file_assets.path 存 assets/<摘要>；文件不使用用户输入路径，文件名仅作下载元数据。当前仅 managed 复制模式。每次上传建立新资产记录，resources.asset_id 指向当前资产；相同字节共享内容文件，旧资产保留。资源上传前可存在“无文件”记录，失败可补传。上传不会移动或修改源文件。
+Files default to `data/assets/<SHA-256>` (or `PROJECT_DESK_DATA_DIR/assets`), with `file_assets.path` storing `assets/<digest>`; user input never determines the path and the file name is download metadata only. Only managed copy mode exists at this stage. Every upload creates a new asset row and `resources.asset_id` points at the current asset; identical bytes share the content file and old assets are retained. A material can exist as a "no file" record before upload, and failed uploads can be retried. Uploads never move or modify the source file.
 
-单文件上限 512 MiB，空文件拒绝。PNG/JPEG/GIF/WebP 图片识别，MP4/WebM/Ogg 视频容器识别；并不保证内部编码可播放。其他附件固定 application/octet-stream 并下载。读取限制在受管理文件目录，仅开放未删除资料的当前资产，支持 GET/HEAD 和单段 Range；缺失文件返回 404，界面可编辑补传。临时上传文件通常在 finally 中清理；进程异常中断和并发冲突可能遗留文件，不在本阶段自动清理。
+Single files are capped at 512 MiB and empty files rejected. PNG/JPEG/GIF/WebP images and MP4/WebM/Ogg video containers are detected; internal codec playability is not guaranteed. Other attachments are always `application/octet-stream` and download. Reads are restricted to managed directories, exposing only the current asset of an undeleted material, supporting GET/HEAD and single-part Range; a missing file returns 404 and the UI can re-upload. Temporary upload files are normally cleaned in `finally`; abnormal process termination and concurrent conflicts may leave files behind, which this phase does not clean automatically.
 
-### 阶段 3 HTTP 接口
+### Phase 3 HTTP endpoints
 
-| 接口 | 职责 |
+| Endpoint | Responsibility |
 | --- | --- |
-| GET /api/resources、GET /api/resources/:id | 可见资料与关系数组、当前文件描述 |
-| POST /api/resources、PUT /api/resources/:id | 新增/编辑元数据；编辑带 revision |
-| DELETE /api/resources/:id | revision 软删除，保留磁盘内容 |
-| POST /api/resources/:id/view | 更新最后查看时间 |
-| PUT /api/resources/:id/favorite | favorite 布尔值及 revision |
-| GET/POST /api/library/{categories,tags,collections} | 分别读取/新增整理对象 |
-| PUT/DELETE /api/library/{type}/:id | revision 编辑/删除；分类删除需 replacement_id |
-| PUT /api/library/{type}/reorder | 完整 ids 顺序数组 |
-| PUT /api/projects/:id/resources | resource_ids 与项目 revision，修改该项目引用 |
-| POST /api/resources/:id/file?revision=N | 同源 octet-stream 二进制，X-File-Name 为 URL 编码原文件名 |
-| GET/HEAD /api/assets/:assetId | 读取当前资产；?download 强制下载 |
+| GET /api/resources, GET /api/resources/:id | Visible materials with relation arrays and current file description |
+| POST /api/resources, PUT /api/resources/:id | Create/edit metadata; edit carries revision |
+| DELETE /api/resources/:id | Revision-checked soft delete, keeping disk content |
+| POST /api/resources/:id/view | Update last viewed time |
+| PUT /api/resources/:id/favorite | favourite boolean and revision |
+| GET/POST /api/library/{categories,tags,collections} | Read/add organisation objects |
+| PUT/DELETE /api/library/{type}/:id | Revision-checked edit/delete; category deletion needs replacement_id |
+| PUT /api/library/{type}/reorder | Full ordered ids array |
+| PUT /api/projects/:id/resources | resource_ids and project revision, changing that project's references |
+| POST /api/resources/:id/file?revision=N | Same-origin octet-stream binary; X-File-Name is the URL-encoded original name |
+| GET/HEAD /api/assets/:assetId | Read the current asset; ?download forces download |
 
-资料新增/编辑 JSON 上限 256 KiB，容纳 30000 字中文正文；其余 JSON 接口保持 32 KiB。上传不经过 JSON 读取器。写请求仍要求同源 Origin，上传同时要求精确 application/octet-stream。无效输入 400、源不合法 403、不存在 404、版本/同名/重复 URL 冲突 409、超限 413、非法范围 416。
+Material JSON is capped at 256 KiB to accommodate a 30000-character Chinese body; other JSON endpoints stay at 32 KiB. Uploads bypass the JSON reader. Writes still require a same-origin Origin, and uploads additionally require exactly `application/octet-stream`. Invalid input 400, bad origin 403, not found 404, version/duplicate name/duplicate URL conflicts 409, oversize 413, invalid range 416.
 
-bootstrap 当前数据版本 004，新增 resources（含 tag_ids/collection_ids/project_ids）、libraryCategories、libraryTags、libraryCollections。summary.resources 排除软删除。前端从同一 bootstrap 读取并筛选、每页 30 份，当前没有服务端查询分页或全文索引；个人大数据量下可后续优化，不维护副本。
+Bootstrap data version is 004 with resources (including tag_ids/collection_ids/project_ids), libraryCategories, libraryTags and libraryCollections. `summary.resources` excludes soft-deleted rows. The frontend reads from the same bootstrap and filters 30 per page; there is no server-side paged query or full-text index yet, which can be optimised later at personal scale without maintaining copies.
 
-后续新增迁移从 005 开始。阶段 4 再处理外部存储设置、引用模式、文件夹、批量导入、完整删除和恢复策略；本阶段不自动清理旧资产或磁盘文件。
+Further migrations start at 005. Phase 4 handles external storage settings, reference mode, folders, batch import, full deletion and restore policy; this phase never auto-cleans old assets or disk files.
 
-## 阶段 4：005-files.sql（当前）
+## Phase 4: 005-files.sql (current)
 
-旧字段不删除或改写；新增表及链接：
+Legacy fields are neither dropped nor rewritten; new tables and links:
 
-| 表 | 职责 |
+| Table | Responsibility |
 | --- | --- |
-| storage_roots | id/name/role/path/revision/created_at；image/video/file/project/other 用途，@data/ 解析为当前数据目录 |
-| file_objects | 文件本体：root_id/path/storage_mode/name/mime/size/sha256/revision/created_at/deleted_at/trash_path/purged_at |
-| file_assets.file_id | 指向共享本体，旧 path/原文件名等继续保留历史兼容；读取以本体为准 |
-| storage_folders | 工具登记的文件夹，root_id/path 联合主键 |
-| file_trash | 文件或目录的 original_path/stored_path、对象/子目录恢复清单、删除时间；外部引用只标记引用关系 |
-| disk_jobs | 持久化移动计划、状态及异常，用于中断恢复和保留副本提示 |
+| storage_roots | id/name/role/path/revision/created_at; image/video/file/project/other roles, with `@data/` resolving to the current data directory |
+| file_objects | File body: root_id/path/storage_mode/name/mime/size/sha256/revision/created_at/deleted_at/trash_path/purged_at |
+| file_assets.file_id | Points at the shared body; legacy path/original name are kept for compatibility, and reads use the body |
+| storage_folders | Tool-registered folders, composite primary key (root_id + path) |
+| file_trash | original_path/stored_path of the file or directory, restore manifest for objects/subdirectories, deletion time; external references only record the reference relationship |
+| disk_jobs | Persisted move plans, state and errors, used for interruption recovery and duplicate-copy warnings |
 
-005 将已有资产按存储模式和路径归并为本体，不移动旧字节。托管路径相对 storage_roots，引用路径为完整绝对路径。实际资源仍由 resources.asset_id 指向资产，多个资源可共享本体；项目通过已有 project_resources 共享资料。
+005 merges existing assets into bodies by storage mode and path without moving old bytes. Managed paths are relative to `storage_roots`; reference paths are absolute. Materials still point to assets via `resources.asset_id`, and multiple materials can share a body; projects share materials through the existing `project_resources`.
 
-资料软删除继续使用 resources.deleted_at；回收站可恢复。永久删除资料行前删除关联和历史资产登记，file_objects 与真实文件保留。文件回收由本体 deleted_at/trash_path 和 file_trash 管理，影响所有共享资料。永久清理仅删除独立托管回收路径内字节，标记 purged_at；外部引用不删除源文件。本阶段文件回收站独立于 Windows 系统回收站。
+Material soft delete continues to use `resources.deleted_at` and can be restored from the recycle bin. Permanently deleting a material row removes associations and historical asset registrations, while `file_objects` and the real file remain. File recycling is governed by the body's `deleted_at`/`trash_path` plus `file_trash`, affecting all sharing materials. Permanent purge only deletes bytes inside the managed recycle path, marking `purged_at`; external references never delete source files. This recycle bin is independent of the Windows Recycle Bin.
 
-复制支持自动按类型选目录或显式指定根和子目录；同内容复用现有可用资料，原状态/分类不改，新增项目引用合并。浏览器上传仍为 512 MiB；路径复制/引用流式读取摘要，不走 JSON 大文件通道。批次最多 200 个文件，逐项返回成功/重复/错误，不回滚同批已成功项。同名不同文件自动避免覆盖。
+Copying either selects a directory automatically by type or takes an explicit root and subdirectory; identical content reuses an existing usable material, keeping its status/category and merging new project references. Browser uploads remain at 512 MiB; path copy/reference streams the digest instead of using the JSON large-file channel. A batch holds at most 200 files and reports success/duplicate/error per item without rolling back already-successful items. Same-name different-file collisions are avoided automatically.
 
-目录迁移要求目标为空；文件和目录移动更新本体及相应项目目录/引用。重新定位默认核对摘要，不一致需 allow_changed 明确确认。引用位于配置根内时可重新登记为托管，但不会复制或删除旧位置。普通外部引用没有原文件改名、移动或删除按钮。
+Directory migration requires an empty target; file and directory moves update the body and the corresponding project folder/reference. Relink verifies the digest by default and requires explicit `allow_changed` confirmation on mismatch. A reference inside a configured root can be re-registered as managed without copying or deleting the old location. Plain external references get no rename, move or delete buttons.
 
-新增接口：GET /api/filesystem、GET /api/trash；POST /api/filesystem/{choose-list,browse,folder,move,trash,import,reveal,upload}；POST/PUT/DELETE /api/storage-roots[/:id]；PUT /api/files/:id/relink；PUT /api/projects/:id/folder；POST /api/trash/:id/{restore,purge}；POST /api/trash/empty；POST /api/backups/{create,inspect,restore}。均保持本机 Host 和同源写入保护，选择器也要求同源 POST。upload 使用 octet-stream，其余为 JSON。
+New endpoints: GET /api/filesystem, GET /api/trash; POST /api/filesystem/{choose-list,browse,folder,move,trash,import,reveal,upload}; POST/PUT/DELETE /api/storage-roots[/:id]; PUT /api/files/:id/relink; PUT /api/projects/:id/folder; POST /api/trash/:id/{restore,purge}; POST /api/trash/empty; POST /api/backups/{create,inspect,restore}. All keep host and same-origin write protection, and the picker also requires same-origin POST. `upload` uses octet-stream, the rest JSON.
 
-bootstrap 为 005，增加 fileSystem（根、文件、可用性、使用范围、项目目录和待检查任务）；resources 增加 file_id/实际模式/文件回收标记。路径和大小来自文件本体，不使用浏览器临时存储作为数据源。
+Bootstrap is 005 and adds `fileSystem` (roots, files, availability, usage scope, project folders and pending jobs); resources gain file_id/actual mode/file-recycle markers. Paths and sizes come from file bodies, never from browser temporary storage.
 
-备份 manifest 记录 format=project-desk-backup、version=1、schema=005、数据库摘要/大小、根映射、文件清单/摘要、缺失文件与外部引用路径。blobs 按内容摘要复用；托管回收文件和历史资产也纳入。恢复重定位 storage_roots 与托管项目目录，保留外部路径。恢复前快照在 data/recovery；数据库切换前后的文件目录都保留，避免覆盖原文件。备份文件不加密，恢复仅接受经过完整性校验的同版本目录包。
+The backup manifest records `format=project-desk-backup`, `version=1`, `schema=005`, database digest/size, root mapping, file list/digests, missing files and external reference paths. Blobs are deduplicated by content digest; managed recycled files and historical assets are included. Restore relocates `storage_roots` and managed project folders while keeping external paths. Pre-restore snapshots live in `data/recovery`; directories from before and after the database switch are both kept to avoid overwriting original files. Backups are not encrypted, and restore accepts only integrity-verified packages of the same version.
 
-后续迁移从 006 开始；阶段 5 提醒规则尚未建立。
+Further migrations start at 006; Phase 5 reminder rules do not exist yet.
 
-## 阶段 5：006-reminders.sql（当前）
+## Phase 5: 006-reminders.sql (current)
 
-新增 projects.last_followed_at；不修改普通项目更新时间语义。
+Adds `projects.last_followed_at` without changing the semantics of the ordinary project update time.
 
-| 表 | 职责 |
+| Table | Responsibility |
 | --- | --- |
-| reminder_settings | 单行：全局、项目、资料开关，project_days/resource_days/repeat_days/snooze_days、daily_time、revision |
-| reminder_rules | kind=project/resource/category + entity_id 主键；可空继承周期、重复间隔、暂停、稍后截止、已处理时间、revision |
-| reminder_history | 对象类型/ID、当时标题、动作、UTC 时刻及说明；界面最近 300 条 |
-| reminder_deliveries | 通知批次 id、created_at、pending/sent/failed、对象快照、错误与完成时间 |
-| reminder_notified | kind/entity_id 当前 cycle、上次预留/投递时间、delivery_id，防重复与冷却 |
-| reminder_runtime | desktop_enabled/desktop_port/last_check_at 等运行元数据；实际系统任务状态须向 Windows 查询 |
+| reminder_settings | Single row: global, project and material switches, project_days/resource_days/repeat_days/snooze_days, daily_time, revision |
+| reminder_rules | Primary key kind=project/resource/category + entity_id; nullable inherited cycle, repeat interval, paused, snooze deadline, handled time, revision |
+| reminder_history | Object type/ID, title at the time, action, UTC timestamp and description; the UI shows the latest 300 |
+| reminder_deliveries | Notification batch id, created_at, pending/sent/failed, object snapshot, error and completion time |
+| reminder_notified | kind/entity_id current cycle, last reservation/delivery time, delivery_id; prevents duplicates and drives cooldown |
+| reminder_runtime | desktop_enabled/desktop_port/last_check_at and other runtime metadata; actual system task state must be queried from Windows |
 
-项目 anchor 是创建、last_followed_at、有效日志事件/实际保存、非空备忘的最大时间，普通项目 updated_at 不参与。资料 anchor 为 created_at/last_viewed_at 较晚值。基础到期=anchor+周期；实际到期取基础到期、handled_at+重复间隔、snoozed_until 的最大值。周期按 24h，展示与日期筛选按本机本地时间。未来事件时间不用于提前推导已跟进。
+A project's anchor is the latest of creation, `last_followed_at`, an effective log event/actual save, and a non-empty memo; the ordinary project `updated_at` does not participate. A material's anchor is the later of `created_at`/`last_viewed_at`. Base due = anchor + cycle; the effective due is the maximum of base due, `handled_at` + repeat interval, and `snoozed_until`. Cycles use 24 hours, while display and date filtering follow local time. Future event times never retroactively mark something as followed up.
 
-单条周期覆盖分类再覆盖全局；继承分类周期时同时受分类暂停约束。项目仅进行中未归档默认参与；资源 learned/used/archived 不参与。规则、项目状态、进度、收藏标记互相独立。动作使用事务并核对数据及规则 revision。去查看只更新 last_viewed_at 和处理历史；继续跟进只更新独立实际跟进时刻；归档、学习、使用、删除只能由明确动作触发，不删除字节。
+A single-object cycle overrides the category, which overrides the global setting; inheriting a category cycle also inherits the category pause. Only in-progress, unarchived projects participate by default; materials marked learned/used/archived do not. Rules, project status, progress and favourite flags are mutually independent. Actions run in transactions and verify data and rule revisions. "Go view" only updates `last_viewed_at` and the handling history; "continue following" only updates the independent actual follow-up time; archiving, learning, using and deleting require explicit actions and never delete bytes.
 
-相同 due cycle 在重复间隔内不会再次弹窗。Windows 失败后移除该批次预留，下一检查可重试；pending 保留预留，防止崩溃后不确定重投。sent 表示 OS 接受，不等于用户已阅读或资料已学习。一次多条汇总到一条通知，标记和组名让旧汇总可替换，不为每个对象创建任务。
+The same due cycle does not notify again within the repeat interval. On Windows failure the batch reservation is released so the next check can retry; `pending` keeps the reservation to avoid uncertain re-delivery after a crash. `sent` means the OS accepted the notification, not that the user read it or learned the material. Multiple items are consolidated into one notification, and tags and group names let an older summary be replaced, so no per-object task is created.
 
-新增 GET /api/reminders；PUT /api/reminders/settings、/rule；POST /api/reminders/action；POST /api/reminders/windows/{install,status,test,run,uninstall}。bootstrap 增加 reminders，数据版本 006。停止接口 POST /api/shutdown 只在实际服务运行时开放，仍要求本机 Host、同源 JSON 和明确确认字段，供 stop.bat 使用。
+New endpoints: GET /api/reminders; PUT /api/reminders/settings and /rule; POST /api/reminders/action; POST /api/reminders/windows/{install,status,test,run,uninstall}. Bootstrap adds `reminders`; data version 006. The shutdown endpoint POST /api/shutdown is only exposed while a service is actually running and still requires a local Host, same-origin JSON and an explicit confirmation field, used by `stop.bat`.
 
-Windows 任务及协议是操作系统资源，不随 SQLite 备份自动注册。005 包恢复前升级 006；006 表纳入备份。恢复关闭当前任务，候选库 desktop_enabled=0，之后明确安装。data/reminders 中的 Windows 配置和诊断日志为本机辅助文件，核心规则/状态/历史均在 SQLite。
+Windows tasks and protocols are operating-system resources and are not registered automatically from a SQLite backup. A 005 package is upgraded to 006 before restore; 006 tables are included in backups. Restore closes current tasks and sets the candidate database to `desktop_enabled=0` for explicit reinstallation afterwards. Windows configuration and diagnostic logs under `data/reminders` are local helper files, while core rules/state/history remain in SQLite.
 
-下次迁移从 007 开始；阶段 6 未开始。
+The next migration starts at 007; Phase 6 is not started.
 
+## Phase 6: statistics and presets (007-experience.sql)
 
-## 阶段 6：统计与预设（007-experience.sql）
+Old tables are not rebuilt; the following independent data is appended:
 
-旧表不重建，追加以下独立数据：
-
-| 表/字段 | 职责 |
+| Table/field | Responsibility |
 | --- | --- |
-| usage_sessions | 页面会话 ID、首次加载/最近有效活动/结束毫秒时间；启动次数按加载数 |
-| usage_visits | 项目访问 ID、会话、项目外键与打开时间；同一次访问重渲染不增加 |
-| usage_blocks | scope=app 或 project:ID 的已合并有效时间区间，start/end 为 UTC epoch 毫秒 |
-| usage_receipts | 客户端片段 ID 去重；收据保留两天，历史使用区间长期保留 |
-| preset_defaults | 17 条初始默认元数据：6 项目分类、6 参与者、5 平台，恢复默认的补缺依据 |
-| presets | kind、名称、图标、参与者类型、顺序、默认来源、图片文件 ID、revision 与时间；同组名称 NOCASE 唯一 |
-| project_categories.icon_file_id | 选用时复制的图片引用，不引用模板 ID |
-| participants.icon / icon_file_id | 参与者自身图标和图片；旧记录默认 idea |
-| resources.platform_icon / platform_image_id | 资料自身的平台图标和图片；删除平台预设不影响历史 |
-| storage_roots: preset-images | 默认 @data/preset-images，独立于业务资料，不生成虚构 resource 记录 |
+| usage_sessions | Page session ID, first load/latest valid activity/end in epoch milliseconds; launch count equals loads |
+| usage_visits | Project visit ID, session, project foreign key and open time; re-renders within one visit do not add rows |
+| usage_blocks | Merged valid time intervals with scope=app or project:ID, start/end as UTC epoch milliseconds |
+| usage_receipts | Client slice ID deduplication; receipts kept two days while historical intervals are kept long-term |
+| preset_defaults | 17 initial default metadata rows: 6 project categories, 6 participants, 5 platforms, the basis for "restore defaults" |
+| presets | kind, name, icon, participant type, order, default origin, image file ID, revision and timestamps; per-group NOCASE uniqueness |
+| project_categories.icon_file_id | Image reference copied at selection time, never a template ID |
+| participants.icon / icon_file_id | Participant's own icon and image; legacy rows default to `idea` |
+| resources.platform_icon / platform_image_id | The material's own platform icon and image; deleting a platform preset does not affect history |
+| storage_roots: preset-images | Defaults to `@data/preset-images`, independent of business materials, creating no fictitious resource rows |
 
-默认值只是预设数据，不自动生成业务分类、参与者或资料。恢复默认只补齐缺失名称；既有记录、编辑内容、用户顺序和自定义项保留。原名字被改名时，改名项仍在，恢复会补回原默认名。图片不随预设删除而删除；历史引用纳入文件使用提示和备份。名称/图标经转义展示，不接受上传 SVG/HTML 执行内容。
+Defaults are preset data only and never auto-generate business categories, participants or materials. Restore defaults only fills missing names; existing rows, edited content, user ordering and custom entries are preserved. If an original name was renamed, the renamed entry stays and restore adds the original default name back. Images are not deleted with presets, and historical references feed file-usage warnings and backups. Names and icons are escaped on display and uploaded SVG/HTML is never executed.
 
-所有统计数据独立保存，不更新项目/日志。服务端合并重叠区间而不简单相加，客户端批次可安全重试；项目软删除不抹掉历史统计。每日统计使用本机时区偏移，今日/7 天/30 天包含今天；无历史值显示 0 或尚无。平均单次=已合并有效时间÷对应加载/访问数，含进行中的会话。硬退出最后心跳的现实限制见 README。
+All statistics are stored independently and never update projects or logs. The server merges overlapping intervals rather than summing them, so client batches can be retried safely; soft-deleting a project does not erase historical statistics. Daily statistics use the local time zone offset, with today/7 days/30 days including today; no history shows 0 or "none yet". Average per session = merged valid time ÷ the corresponding load/visit count, including in-progress sessions. The practical limit of the final heartbeat on a hard exit is described in the README.
 
-主要新接口：POST /api/usage/heartbeat；GET /api/usage?offset= 与 /api/usage/projects/:id?offset=；GET /api/search?q=；GET/POST/PUT/DELETE /api/presets[/:id]，POST /:id/apply，POST/DELETE /:id/image，PUT /reorder、POST /restore。GET/HEAD /api/preset-images/:fileId 仅读取仍被预设或历史业务引用的安全图片。写入保持同源校验，预设图片二进制最多 2 MiB，其他上传上限仍为 512 MiB。
+Main new endpoints: POST /api/usage/heartbeat; GET /api/usage?offset= and /api/usage/projects/:id?offset=; GET /api/search?q=; GET/POST/PUT/DELETE /api/presets[/:id], POST /:id/apply, POST/DELETE /:id/image, PUT /reorder, POST /restore. GET/HEAD /api/preset-images/:fileId serves only safe images still referenced by presets or historical business records. Writes keep same-origin validation; preset images are capped at 2 MiB while other uploads remain at 512 MiB.
 
-备份校验现接受 005/006/007，完整 SQLite 自动包含统计和预设；全部托管图片通过 file_objects 摘要校验，旧包迁移补入新表。正式数据升级已与变更前 28 张表的原字段/原记录逐项比对一致。
+Backup verification now accepts 005/006/007; the full SQLite snapshot automatically includes statistics and presets, and all managed images are digest-verified through `file_objects`, with older packages migrated to the new tables. The production data upgrade was compared item by item against the 28 tables and original fields/rows from before the change.
 
+## Phase 7 data boundaries
 
-## 阶段 7 数据边界
-
-v0.7.0 是设计阶段，数据版本仍为 007，无新表、字段或迁移；原后端文件保持完全一致。主题仍由 SQLite settings.theme 保存。视图、单项目置顶和最近数量属于前端偏好，保存于以实际数据库路径分区的 localStorage，不写项目/日志，不改变 updated_at / revision / 闲置锚点，也不包含在现有 SQLite 备份中。换浏览器或清除站点数据后恢复界面默认，不丢失业务资料。未创建优先级、任务或开发阶段模型，不补造任务计数。
+v0.7.0 is a design phase: data version stays 007 with no new tables, fields or migrations, and backend files are completely unchanged. The theme is still stored in `settings.theme` in SQLite. View mode, per-project pinning and recent-item count are frontend preferences stored in `localStorage` partitioned by actual database path; they never write projects or logs, never change `updated_at` / revision / idle anchors, and are not included in existing SQLite backups. Changing browsers or clearing site data restores UI defaults without losing business data. No priority, task or development-stage model was created, and no task counts were fabricated.

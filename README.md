@@ -24,7 +24,7 @@ start.bat            # Windows: launches service + opens the browser
 npm start            # or run it from a terminal
 ```
 
-The workbench opens at <http://127.0.0.1:4317>. Stop the service with `stop.bat` (or `npm run` — see scripts below). Closing the browser tab does **not** stop the service.
+The workbench opens at <http://127.0.0.1:4317>. Stop the service with `stop.bat` (or `npm run serve` — see scripts below). Closing the browser tab does **not** stop the service.
 
 | Script | Purpose |
 | --- | --- |
