@@ -1,0 +1,16 @@
+# Local data and generated files
+/data/**
+!/data/.gitkeep
+/logs/**
+!/logs/.gitkeep
+/backups/**
+/output/**
+/.taste-skill/**
+/.agents/**
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

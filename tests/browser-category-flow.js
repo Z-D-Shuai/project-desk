@@ -1,0 +1,34 @@
+async (page) => {
+  if (!page.url().startsWith('http://127.0.0.1:4318/')) throw new Error('仅可在 4318 独立验收服务运行此脚本');
+  const bootstrap = await (await page.request.get('http://127.0.0.1:4318/api/bootstrap')).json();
+  if (!bootstrap.storage.databasePath.includes('phase1-test-data')) throw new Error('拒绝操作正式数据库');
+  const assert = (condition, message) => { if (!condition) throw new Error(message); };
+  await page.getByRole('button',{name:'新增分类',exact:true}).click();
+  await page.getByRole('textbox',{name:'分类名称 必填'}).fill('转移目标分类');
+  await page.getByRole('combobox',{name:/^图标/}).selectOption('book');
+  await page.getByRole('button',{name:'保存分类',exact:true}).click();
+  await page.locator('.category-row').filter({hasText:'转移目标分类'}).waitFor();
+  const row = () => page.locator('.category-row').filter({hasText:'验收分类'});
+  await row().getByRole('button',{name:'编辑',exact:true}).click();
+  await page.getByRole('textbox',{name:'分类名称 必填'}).fill('验收分类已改名');
+  await page.getByRole('combobox',{name:/^图标/}).selectOption('custom');
+  await page.getByRole('textbox',{name:/自定义符号/}).fill('文');
+  await page.getByRole('button',{name:'保存分类',exact:true}).click();
+  await row().getByText('验收分类已改名',{exact:true}).waitFor();
+  await row().getByRole('button',{name:'取消收藏',exact:true}).click();
+  await row().getByRole('button',{name:'收藏',exact:true}).waitFor();
+  await row().getByRole('button',{name:'收藏',exact:true}).click();
+  await row().getByRole('button',{name:'取消收藏',exact:true}).waitFor();
+  await row().getByRole('button',{name:'下移 验收分类已改名',exact:true}).click();
+  await page.waitForFunction(() => document.querySelectorAll('.category-identity strong')[1]?.textContent==='验收分类已改名');
+  assert((await page.locator('.category-row').last().innerText()).includes('验收分类已改名'),'分类排序未保存');
+  await row().getByRole('button',{name:'删除',exact:true}).click();
+  await page.getByRole('combobox',{name:/项目转移到/}).selectOption({label:'转移目标分类'});
+  await page.getByRole('button',{name:'确认转移并删除分类',exact:true}).click();
+  await page.waitForFunction(() => document.querySelectorAll('.category-row').length===1);
+  assert((await page.locator('.category-row').innerText()).includes('1 个项目'),'分类转移后的项目数不正确');
+  await page.getByRole('link',{name:'项目档案',exact:true}).click();
+  await page.getByRole('link',{name:'阶段一验收项目已编辑',exact:true}).waitFor();
+  assert((await page.locator('.category-cell').innerText()).includes('转移目标分类'),'项目没有转移到新分类');
+  console.log('PASS: category create/edit/custom icon/favorite/reorder/delete-with-transfer');
+}

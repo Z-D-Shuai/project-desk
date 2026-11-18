@@ -1,0 +1,61 @@
+/* PROJECT DESK Design Tokens — initial proposal
+   Inspect the existing app and tune values after screenshot comparison. */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --pd-canvas: #F4F2ED;
+  --pd-surface: #FBFAF7;
+  --pd-surface-raised: #FFFFFF;
+  --pd-surface-muted: #EEECE6;
+  --pd-surface-inset: #E9E7E0;
+  --pd-text-primary: #292A27;
+  --pd-text-secondary: #676960;
+  --pd-text-tertiary: #92928A;
+  --pd-border: #DFDDD5;
+  --pd-border-strong: #C9C7BE;
+  --pd-accent: #666A62;
+  --pd-accent-contrast: #FFFFFF;
+  --pd-success: #667A68;
+  --pd-warning: #A18153;
+  --pd-danger: #A56D68;
+  --pd-info: #6E7E8C;
+  --pd-shadow-soft: 0 2px 8px rgb(35 35 30 / 5%);
+  --pd-shadow-raised: 3px 3px 8px rgb(35 35 30 / 7%), -3px -3px 8px rgb(255 255 255 / 75%);
+  --pd-radius-sm: 8px;
+  --pd-radius-md: 12px;
+  --pd-radius-lg: 16px;
+  --pd-space-1: 4px;
+  --pd-space-2: 8px;
+  --pd-space-3: 12px;
+  --pd-space-4: 16px;
+  --pd-space-5: 20px;
+  --pd-space-6: 24px;
+  --pd-space-8: 32px;
+  --pd-motion-fast: 140ms;
+  --pd-motion-base: 180ms;
+  --pd-motion-panel: 220ms;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --pd-canvas: #191A18;
+  --pd-surface: #20211F;
+  --pd-surface-raised: #272925;
+  --pd-surface-muted: #2B2D29;
+  --pd-surface-inset: #171815;
+  --pd-text-primary: #F0EFE9;
+  --pd-text-secondary: #AAA99F;
+  --pd-text-tertiary: #85857D;
+  --pd-border: #383A35;
+  --pd-border-strong: #4A4C46;
+  --pd-accent: #C5C6BC;
+  --pd-accent-contrast: #20211F;
+  --pd-success: #9BAF9B;
+  --pd-warning: #C5A77B;
+  --pd-danger: #C58D86;
+  --pd-info: #9AAEBB;
+  --pd-shadow-soft: 0 2px 10px rgb(0 0 0 / 18%);
+  --pd-shadow-raised: 3px 3px 8px rgb(0 0 0 / 22%), -3px -3px 8px rgb(255 255 255 / 3%);
+}
+
+:root{--ground:var(--pd-canvas);--surface:var(--pd-surface);--raised:var(--pd-surface-muted);--active:var(--pd-surface-inset);--ink:var(--pd-text-primary);--muted:var(--pd-text-secondary);--line:var(--pd-border);--control:var(--pd-border-strong);--primary:var(--pd-accent);--on-primary:var(--pd-accent-contrast);--focus:var(--pd-info);--font:"Segoe UI","Microsoft YaHei UI",sans-serif;--text-body:14px;--text-title:30px;--radius:12px;--ease-out:cubic-bezier(.23,1,.32,1);--ease-in-out:cubic-bezier(.77,0,.175,1);--ease-drawer:cubic-bezier(.32,.72,0,1);--pd-shadow-inset:inset 2px 2px 5px rgb(35 35 30 / 9%),inset -2px -2px 5px rgb(255 255 255 / 45%);--pd-display:Georgia,"Songti SC","SimSun",serif}
+[data-theme="dark"]{--pd-text-secondary:#b4b4a9;--pd-shadow-inset:inset 2px 2px 5px rgb(0 0 0 / 25%),inset -2px -2px 4px rgb(255 255 255 / 3%)}

@@ -1,0 +1,11 @@
+import {categoryIcon} from './project-components.js';
+import {escapeHtml as e} from './components.js';
+export const kindNames={video_link:'视频收藏',image:'图片资料',web:'网页收藏',text:'文字资料',file:'其他附件',video:'本地视频'};
+export const stateNames={unsorted:'未整理',to_view:'待查看',learning:'学习中',learned:'已学会',used:'已使用',archived:'已归档'};
+export const taxNames={categories:'资料分类',tags:'标签',collections:'收藏夹'};
+export const taxRows=(s,t)=>s[{categories:'libraryCategories',tags:'libraryTags',collections:'libraryCollections'}[t]];
+export const options=(items,current='',first='全部')=>`<option value="">${first}</option>`+items.map(x=>`<option value="${e(x.id)}" ${x.id===current?'selected':''}>${e(x.name)}</option>`).join('');
+export const mapOptions=(map,current)=>Object.entries(map).map(([id,name])=>`<option value="${id}" ${id===current?'selected':''}>${name}</option>`).join('');
+export const checkboxes=(name,items,selected=[])=>items.length?items.map(x=>`<label class="checkbox-label"><input type="checkbox" name="${name}" value="${e(x.id)}" ${selected.includes(x.id)?'checked':''}>${e(x.name)}</label>`).join(''):'<p class="muted">尚未添加</p>';
+export function thumbnail(r){return r.kind==='image'&&r.asset_id?`<img class="resource-thumbnail" src="/api/assets/${r.asset_id}" alt="${e(r.title)}" loading="lazy">`:r.kind==='video'&&r.asset_id?`<video class="resource-thumbnail" muted preload="metadata" src="/api/assets/${r.asset_id}" aria-label="${e(r.title)}"></video>`:`<div class="resource-type-label">${categoryIcon(({video_link:'camera',web:'globe',text:'book',file:'folder',video:'camera'})[r.kind]||'folder')}<span>${kindNames[r.kind]}</span></div>`;}
+export function resourceCards(rows){return `<div class="resource-grid">${rows.map(r=>`<article class="resource-card"><a href="#library/${r.id}">${thumbnail(r)}<h3>${e(r.title)}</h3></a><div class="resource-card-meta"><span>${stateNames[r.status]}</span><span>${r.favorite?'已收藏':'未收藏'}</span></div>${r.file_id?`<p class="resource-local-state">${r.file_deleted_at||r.file_purged_at||r.file_available===false?'文件不可用 · 可重新定位':r.storage_mode==='reference'?'引用本地文件':'文件已入库'}</p>`:''}${r.project_ids?.length?`<p>${r.project_ids.length} 个关联项目</p>`:''}<p>${e(r.platform||r.notes||r.original_name||kindNames[r.kind])}</p></article>`).join('')}</div>`;}

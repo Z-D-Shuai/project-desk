@@ -1,0 +1,6 @@
+async page=>{
+ const base='http://127.0.0.1:4318';const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ for(const width of [1440,768,390]){await page.setViewportSize({width,height:width===768?1024:width===390?844:900});for(const [route,title] of [['settings/storage','存储目录'],['settings/backup','备份与恢复'],['library/trash','回收站'],['library/files','文件管理'],['overview','总览'],['projects','项目档案'],['journal','跟进中心'],['library','资料库'],['settings','设置']]){await page.goto(base+'/#'+route);await page.getByRole('heading',{name:title,exact:true,level:1}).waitFor();if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error(route+' overflows at '+width);}
+ await page.goto(base+'/#library/files');await page.getByRole('button',{name:'导入文件',exact:true}).click();const d=page.getByRole('dialog');if(await d.evaluate(e=>e.scrollWidth>e.clientWidth))throw Error('import overflow');await page.screenshot({path:'D:/桌面文件/集合/PROJECT DESK/output/playwright/phase4-import-'+width+'.png'});await d.getByRole('button',{name:'关闭',exact:true}).click();}
+ await page.setViewportSize({width:1440,height:900});await page.goto(base+'/#library/files');if(errors.length)throw Error(errors.join(';'));return {ninePagesAcrossThreeWidths:true,importDialogThreeWidths:true,pageErrors:errors};
+}

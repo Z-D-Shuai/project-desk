@@ -1,0 +1,15 @@
+import { escapeHtml as e } from './components.js';
+export const statusNames={not_started:'未开始',in_progress:'进行中',paused:'暂停',completed:'已完成',abandoned:'已放弃'};
+export const iconNames={folder:'文件夹',code:'代码',design:'设计',book:'书籍',camera:'影像',globe:'网页',idea:'想法'};
+const paths={folder:'<path d="M3 7V4h6l3 3h9v13H3V7Zm0 3h18"/>',code:'<path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18"/>',design:'<path d="m4 17 13-13 3 3L7 20H4v-3Zm10-10 3 3"/>',book:'<path d="M3 4h7l2 2 2-2h7v16h-7l-2 1-2-1H3V4Zm9 2v15"/>',camera:'<path d="M3 7h5l2-3h4l2 3h5v13H3V7Z"/><circle cx="12" cy="13" r="4"/>',globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-6 5-6 13 0 18 6-5 6-13 0-18Z"/>',idea:'<path d="M9 18h6m-6 3h6M8 16c0-4-3-4-3-8a7 7 0 0 1 14 0c0 4-3 4-3 8H8Z"/>'};
+export const categoryIcon=(value='folder',imageId=null)=>imageId?`<span class="preset-icon">${categoryIcon(value)}<img class="preset-img" alt="" src="/api/preset-images/${encodeURIComponent(imageId)}"></span>`:Object.hasOwn(paths,value)?`<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${paths[value]}</svg>`:`<span class="custom-icon" aria-hidden="true">${e(value)}</span>`;
+export const categoryLabel=p=>`<span class="category-label">${categoryIcon(p.category_icon||'folder',p.category_icon_file_id)}<span>${e(p.category_name||'未分类')}</span></span>`;
+export function ring(progress,large=false){
+ const n=Number.isInteger(progress)?Math.max(0,Math.min(100,progress)):0;
+ return `<span class="progress-ring ${large?'large':''}" role="img" aria-label="完成度 ${n}%"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="ring-track" cx="22" cy="22" r="18"/><circle class="ring-value" cx="22" cy="22" r="18" pathLength="100" stroke-dasharray="${n} 100" transform="rotate(-90 22 22)"/></svg><span>${n}%</span></span>`;
+}
+export function dateTime(value){if(!value)return '—';const d=new Date(value);return Number.isNaN(d.getTime())?'—':new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);}
+export const statusOptions=current=>Object.entries(statusNames).map(([v,t])=>`<option value="${v}" ${current===v?'selected':''}>${t}</option>`).join('');
+export const categoryOptions=(categories,current=null,exclude=null)=>'<option value="">未分类</option>'+categories.filter(c=>c.id!==exclude).map(c=>`<option value="${e(c.id)}" ${current===c.id?'selected':''}>${e(c.name)}${c.favorite?'（收藏）':''}</option>`).join('');
+export const statusLabel=p=>`<span class="project-status">${statusNames[p.status]||'未知状态'}</span>${p.archived_at?'<span class="archive-label">已归档</span>':''}`;
+export const recentProjects=projects=>`<div class="recent-list">${projects.map(p=>`<a class="recent-row" href="#projects/${e(p.id)}"><div class="project-identity"><strong>${e(p.name)}</strong><span>${statusNames[p.status]} · ${e(p.category_name||'未分类')}${p.archived_at?' · 已归档':''}</span></div>${ring(p.progress)}</a>`).join('')}</div>`;
